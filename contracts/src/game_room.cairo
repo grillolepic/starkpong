@@ -12,17 +12,18 @@ mod GameRoom {
     use starknet::ContractAddress;
     use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
     use stark_pong::utils::game_room_status::{GameRoomStatus, StorageAccessGameRoomStatusImpl};
-    //use stark_pong::game::{GameState};
+    use stark_pong::game::game_components::objects::{Paddle, Ball};
+    use stark_pong::game::game_components::actions::TurnAction;
 
     struct Storage {
         _factory_address: ContractAddress,
         _wager: u256,
 
-        _player1: Player,
-        _player2: Player,
+        _players: LegacyMap<u8, Player>,
         _status: GameRoomStatus,
 
-        //_game_state: GameState
+        _paddles: LegacyMap<u8, Paddle>,
+        _ball: Ball
     }
 
     impl GameRoomImpl of IGameRoom {
