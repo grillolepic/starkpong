@@ -37,7 +37,7 @@ mod GameRoom {
     fn constructor(
         factory_address: ContractAddress,
         player_address: ContractAddress,
-        offchain_address: ContractAddress,
+        offchain_public_key: ContractAddress,
         wager: u256
     ) {
         _wager::write(wager);

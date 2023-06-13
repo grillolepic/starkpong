@@ -78,13 +78,13 @@ mod GameRoomFactory {
     //***********************************************************//
 
     #[external]
-    fn create_room(offchain_address: ContractAddress, wager: u256) {
+    fn create_room(offchain_public_key: ContractAddress, wager: u256) {
         let player_address = get_caller_address();
 
         assert_player_can_join_room(player_address);
         assert_player_can_wager(player_address, wager);
 
-        let new_game_room_address = _deploy_game_room(player_address, offchain_address, wager);
+        let new_game_room_address = _deploy_game_room(player_address, offchain_public_key, wager);
 
         _send_wager_to_game_room(player_address, wager, new_game_room_address);
 
@@ -111,13 +111,13 @@ mod GameRoomFactory {
         }
     }
 
-    fn _deploy_game_room(player_address: ContractAddress, offchain_address: ContractAddress, wager: u256) -> ContractAddress {
+    fn _deploy_game_room(player_address: ContractAddress, offchain_public_key: ContractAddress, wager: u256) -> ContractAddress {
         let game_room_classhash = _game_room_classhash::read();
 
         let mut calldata = ArrayTrait::<felt252>::new();
         get_contract_address().serialize(ref calldata);
         player_address.serialize(ref calldata);
-        offchain_address.serialize(ref calldata);
+        offchain_public_key.serialize(ref calldata);
         wager.serialize(ref calldata);
 
         let game_room_count = _game_room_count::read();
