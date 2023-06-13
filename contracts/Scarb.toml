@@ -1,5 +1,5 @@
 [package]
-name = "starkpong"
+name = "stark_pong"
 version = "0.1.0"
 
 [dependencies]
