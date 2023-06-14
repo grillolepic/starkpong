@@ -1,6 +1,14 @@
-use core::serde::Serde;
+use starknet::ContractAddress;
+
+#[abi]
+trait IGameRoomFactory {
+    #[view]
+    fn game_token() -> ContractAddress;
+}
+
 #[contract]
 mod GameRoomFactory {
+    use super::IGameRoomFactory;
     use stark_pong::game_token::{IERC20Dispatcher, IERC20DispatcherTrait};
     use stark_pong::game_room::{IGameRoomDispatcher, IGameRoomDispatcherTrait};
     use starknet::{ContractAddress, ClassHash, get_caller_address, get_contract_address};
@@ -39,17 +47,23 @@ mod GameRoomFactory {
     fn GameRoomCreated(game_room: ContractAddress, player: ContractAddress, wager: u256) {}
 
     //***********************************************************//
+    //                   IMPL FOR CONTRACT CALL
+    //***********************************************************//
+
+    impl GameRoomFactoryImpl of IGameRoomFactory {
+        #[view]
+        fn game_token() -> ContractAddress {
+            _game_token::read()
+        }
+    }
+
+    //***********************************************************//
     //                      VIEW FUNCTIONS
     //***********************************************************//
 
     #[view]
     fn owner() -> ContractAddress {
         _owner::read()
-    }
-
-    #[view]
-    fn game_token() -> ContractAddress {
-        _game_token::read()
     }
 
     #[view]
