@@ -42,4 +42,57 @@ mod GameRoom {
     ) {
         _wager::write(wager);
     }
+
+    //***********************************************************//
+    //         JOIN & EXIT GAME ROOM EXTERNAL FUNCTIONS
+    //***********************************************************//
+
+    #[external]
+    fn join_game_room(
+        player_address: ContractAddress,
+        offchain_public_key: ContractAddress
+    ) {}
+
+    #[external]
+    fn exit_game_room() {}
+
+    //***********************************************************//
+    //               GAME STATE EXTERNAL FUNCTIONS
+    //***********************************************************//
+
+    #[external]
+    fn set_game_state() {}
+
+    #[external]
+    fn advance_game_state() {}
+
+    #[external]
+    fn exit_with_partial_result() {}
+
+    #[external]
+    fn dispute_partial_result() {}
+
+    //***********************************************************//
+    //              GAME STATUS INTERNAL FUNCTIONS
+    //***********************************************************//
+
+    fn _start_game() {}
+
+    fn _finish_game() {}
+
+    fn _calculate_optimal_result() {}
+
+    //***********************************************************//
+    //         SIGNATURE VERIFICATION INTERNAL FUNCTIONS
+    //***********************************************************//
+
+    fn _verify_signature() {}
+
+    fn _verify_game_state() {}
+
+    //***********************************************************//
+    //                 UTILS INTERNAL FUNCTIONS                 
+    //***********************************************************//
+
+    fn assert_player() {}
 }
