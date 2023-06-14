@@ -44,6 +44,8 @@ mod GameRoomFactory {
 
     #[event]
     fn OwnershipTransferred(previous_owner: ContractAddress, new_owner: ContractAddress) {}
+    
+    #[event]
     fn GameRoomCreated(game_room: ContractAddress, player: ContractAddress, wager: u256) {}
 
     //***********************************************************//

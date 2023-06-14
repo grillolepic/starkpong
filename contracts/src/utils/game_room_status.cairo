@@ -7,13 +7,13 @@ use starknet::{StorageAccess, StorageBaseAddress, SyscallResult};
 use starknet::{storage_read_syscall, storage_write_syscall, storage_address_from_base_and_offset};
 use starknet::{ContractAddress, Felt252TryIntoContractAddress};
 
-#[derive(PartalEq, Drop)]
+#[derive(PartialEq, Drop)]
 enum GameRoomStatus {
     WaitingForPlayers: (),
     InProgress: (),
     Finished: (),
     Disputed: (),
-    Abandoned: ()
+    Closed: ()
 }
 
 impl StorageAccessGameRoomStatusImpl of StorageAccess<GameRoomStatus> {
@@ -23,7 +23,7 @@ impl StorageAccessGameRoomStatusImpl of StorageAccess<GameRoomStatus> {
             GameRoomStatus::InProgress(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 1_u8.into()),
             GameRoomStatus::Finished(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 2_u8.into()),
             GameRoomStatus::Disputed(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 3_u8.into()),
-            GameRoomStatus::Abandoned(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 4_u8.into())
+            GameRoomStatus::Closed(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 4_u8.into())
         }
         
         SyscallResult::Ok(())
@@ -41,7 +41,7 @@ impl StorageAccessGameRoomStatusImpl of StorageAccess<GameRoomStatus> {
         } else if (status_value == 3) {
             return Result::Ok(GameRoomStatus::Disputed(()));
         } else if (status_value == 4) {
-            return Result::Ok(GameRoomStatus::Abandoned(()));
+            return Result::Ok(GameRoomStatus::Closed(()));
         }
 
         let mut error_msg = ArrayTrait::<felt252>::new();
