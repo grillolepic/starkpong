@@ -1,3 +1,4 @@
+use stark_pong::game::game_components::actions::TurnActionTrait;
 use core::zeroable::Zeroable;
 use starknet::ContractAddress;
 
@@ -8,20 +9,24 @@ trait IGameRoom {
 }
 
 #[contract]
-mod GameRoom {    
+mod GameRoom {
     use super::IGameRoom;
     use option::OptionTrait;
     use zeroable::Zeroable;
     use traits::{Into, TryInto};
+    use array::{ArrayTrait, SpanTrait};
     use ecdsa::check_ecdsa_signature;
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
     use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
     use stark_pong::utils::game_room_status::{GameRoomStatus, StorageAccessGameRoomStatusImpl};
+    use stark_pong::utils::signature::{Signature};
     use stark_pong::game::{initial_game_state};
     use stark_pong::game::game_components::objects::{Paddle, Ball};
-    use stark_pong::game::game_components::state::{GameState};
-    use stark_pong::game::game_components::actions::TurnAction;
-    use stark_pong::game_room_factory::{IGameRoomFactoryDispatcher, IGameRoomFactoryDispatcherTrait};
+    use stark_pong::game::game_components::state::{GameState, GameStateTrait};
+    use stark_pong::game::game_components::actions::{TurnAction, TurnActionTrait};
+    use stark_pong::game_room_factory::{
+        IGameRoomFactoryDispatcher, IGameRoomFactoryDispatcherTrait
+    };
     use stark_pong::game_token::{IERC20Dispatcher, IERC20DispatcherTrait};
 
     struct Storage {
@@ -66,10 +71,10 @@ mod GameRoom {
         let block_timestamp = get_block_timestamp();
         let player_number: u8 = (block_timestamp % 2_u64).try_into().unwrap();
 
-        _players::write(player_number, Player {
-            address: player_address,
-            offchain_public_key: offchain_public_key
-        });
+        _players::write(
+            player_number,
+            Player { address: player_address, offchain_public_key: offchain_public_key }
+        );
     }
 
     //***********************************************************//
@@ -78,6 +83,9 @@ mod GameRoom {
 
     #[event]
     fn GameStarted() {}
+
+    #[event]
+    fn GameStateUpdated(state: GameState) {}
 
     #[event]
     fn GameFinished() {}
@@ -94,7 +102,7 @@ mod GameRoom {
     //***********************************************************//
     //                      VIEW FUNCTIONS
     //***********************************************************//
-    
+
     #[view]
     fn status() -> (GameRoomStatus, u64) {
         (_status::read(), _deadline::read())
@@ -120,12 +128,10 @@ mod GameRoom {
     //***********************************************************//
 
     #[external]
-    fn join_game_room(
-        offchain_public_key: ContractAddress
-    ) {
+    fn join_game_room(offchain_public_key: ContractAddress) {
         assert_deadline();
         assert_status(GameRoomStatus::WaitingForPlayers(()));
-        
+
         let player_address = get_caller_address();
 
         let mut other_player_number = 0_u8;
@@ -136,12 +142,16 @@ mod GameRoom {
 
         _send_wager_to_game_room(player_address);
 
-        let player_number: u8 = if (other_player_number == 0_u8) { 1_u8 } else { 0_u8 };
-        _players::write(player_number, Player {
-            address: player_address,
-            offchain_public_key: offchain_public_key
-        });
-        
+        let player_number: u8 = if (other_player_number == 0_u8) {
+            1_u8
+        } else {
+            0_u8
+        };
+        _players::write(
+            player_number,
+            Player { address: player_address, offchain_public_key: offchain_public_key }
+        );
+
         _start_game();
     }
 
@@ -160,15 +170,60 @@ mod GameRoom {
     //***********************************************************//
 
     #[external]
-    fn set_game_state() {
+    fn set_game_state(new_game_state: GameState, signature_0: Signature, signature_1: Signature) {
         assert_deadline();
         assert_status(GameRoomStatus::InProgress(()));
+
+        _update_game_state(new_game_state, signature_0, signature_1);
+
+        match new_game_state.winner() {
+            Option::Some(winner) => {
+                _finish_game();
+            },
+            Option::None(()) => {}
+        };
     }
 
     #[external]
-    fn advance_game_state() {
+    fn advance_game_state(mut turns: Array<TurnAction>) {
         assert_deadline();
         assert_status(GameRoomStatus::InProgress(()));
+
+        let mut processed_turns: usize = 0;
+        let mut new_game_state = _state::read();
+        loop {
+            match turns.pop_front() {
+                Option::Some(turn_action) => {
+                    let next_turn = new_game_state.turn + 1;
+                    assert(turn_action.turn <= next_turn, 'NON_CONSECUTIVE_TURN');
+
+                    if (turn_action.turn == next_turn) {
+                        let player_number = _player_number_from_turn(next_turn);
+                        let player = _players::read(player_number);
+
+                        assert(
+                            turn_action.verify_signature(player.offchain_public_key),
+                            'INVALID_SIGNATURE'
+                        );
+
+                        new_game_state = new_game_state.apply_turn(turn_action);
+                    }
+                },
+                Option::None(_) => {
+                    break ();
+                }
+            };
+        };
+
+        _state::write(new_game_state);
+        GameStateUpdated(new_game_state);
+
+        match new_game_state.winner() {
+            Option::Some(winner) => {
+                _finish_game();
+            },
+            Option::None(()) => {}
+        };
     }
 
     #[external]
@@ -194,17 +249,49 @@ mod GameRoom {
         GameStarted();
     }
 
-    fn _finish_game() {}
+    fn _update_game_state(
+        new_game_state: GameState, signature_0: Signature, signature_1: Signature
+    ) {
+        let new_game_state_hash = new_game_state.hash();
+        let player_0 = _players::read(0_u8);
+        let player_1 = _players::read(1_u8);
 
-    fn _calculate_optimal_result() {}
+        assert(new_game_state.is_valid(@_state::read()), 'INVALID_GAME_STATE');
+        assert(
+            check_ecdsa_signature(
+                new_game_state_hash,
+                player_0.offchain_public_key.into(),
+                signature_0.r,
+                signature_0.s
+            ),
+            'INVALID_SIGNATURE_0'
+        );
+        assert(
+            check_ecdsa_signature(
+                new_game_state_hash,
+                player_1.offchain_public_key.into(),
+                signature_1.r,
+                signature_1.s
+            ),
+            'INVALID_SIGNATURE_1'
+        );
 
-    //***********************************************************//
-    //         SIGNATURE VERIFICATION INTERNAL FUNCTIONS
-    //***********************************************************//
+        _state::write(new_game_state);
+        GameStateUpdated(new_game_state);
+    }
 
-    fn _verify_signature() {}
+    fn _player_number_from_turn(turn: u64) -> u8 {
+        let rem = turn % 2_u64;
+        rem.try_into().unwrap()
+    }
 
-    fn _verify_game_state() {}
+    fn _finish_game() {
+        //_send_wager_to_winner(winner);
+    }
+
+    fn _calculate_optimal_result() {
+        
+    }
 
     //***********************************************************//
     //                 UTILS INTERNAL FUNCTIONS                 
@@ -239,22 +326,25 @@ mod GameRoom {
         if (wager > 0_u256) {
             let contract_address = get_contract_address();
             let factory = IGameRoomFactoryDispatcher { contract_address: _factory_address::read() };
-            let game_token_address = factory.game_token();        
+            let game_token_address = factory.game_token();
             let game_token = IERC20Dispatcher { contract_address: game_token_address };
-            assert(game_token.transfer_from(player_address, contract_address, wager), 'WAGER_TRANSFER_FAILED');
+            assert(
+                game_token.transfer_from(player_address, contract_address, wager),
+                'WAGER_TRANSFER_FAILED'
+            );
         }
     }
 
     fn _refund_wagers() {
         let contract_address = get_contract_address();
         let factory = IGameRoomFactoryDispatcher { contract_address: _factory_address::read() };
-        let game_token_address = factory.game_token();        
+        let game_token_address = factory.game_token();
         let game_token = IERC20Dispatcher { contract_address: game_token_address };
 
         let player_0 = _players::read(0_u8);
         let player_1 = _players::read(1_u8);
         let total_balance = game_token.balance_of(contract_address);
-        
+
         if (player_1.address.is_zero()) {
             assert(game_token.transfer(player_0.address, total_balance), 'REFUND_FAILED');
         } else {
