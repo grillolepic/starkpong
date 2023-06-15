@@ -199,4 +199,14 @@ mod GameRoomFactory {
         _owner::write(new_owner);
         OwnershipTransferred(previous_owner, new_owner);
     }
+
+    //***********************************************************//
+    //                      UPGRADEABILITY
+    //***********************************************************//
+
+    #[external]
+    fn upgrade(new_class_hash: ClassHash) {
+        assert_only_owner();
+        //replace_class_syscall(new_class_hash);
+    }
 }

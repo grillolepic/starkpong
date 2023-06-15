@@ -1,15 +1,16 @@
 use serde::Serde;
+use hash::LegacyHash;
 use option::OptionTrait;
-use result::{ResultTrait, ResultTraitImpl};
 use traits::{Into, TryInto};
-use stark_pong::game::game_components::objects::{Ball, IntoFelt252BallImpl, IntoBallFelt252Impl, Paddle, IntoFelt252PaddleImpl, IntoPaddleFelt252Impl};
+use result::{ResultTrait, ResultTraitImpl};
 use starknet::{StorageAccess, StorageBaseAddress, SyscallResult};
 use starknet::{storage_read_syscall, storage_write_syscall, storage_address_from_base_and_offset};
+use stark_pong::game::game_components::objects::{Ball, IntoFelt252BallImpl, IntoBallFelt252Impl, Paddle, IntoFelt252PaddleImpl, IntoPaddleFelt252Impl};
 
 const POW_2_64: u128 = 18446744073709551616;
 const POW_2_72: u128 = 4722366482869645213696;
 
-#[derive(Drop, Serde)]
+#[derive(Drop, Copy, Serde)]
 struct GameState {
     turn: u64,
     score_0: u8,
@@ -17,6 +18,10 @@ struct GameState {
     paddle_0: Paddle,
     paddle_1: Paddle,
     ball: Ball
+}
+
+trait HashTrait {
+    fn hash(self: @GameState) -> felt252;
 }
 
 impl StorageAccessGameStateImpl of StorageAccess<GameState> {
@@ -63,5 +68,29 @@ impl StorageAccessGameStateImpl of StorageAccess<GameState> {
                 ball: fourth_felt.into()
             }
         )
+    }
+}
+
+impl HashGameStateImpl of HashTrait {
+    fn hash(self: @GameState) -> felt252 {
+        
+        let game_state = *self;
+
+        //Turn and scores
+        let turn_value: u128     = game_state.turn.into();
+        let score_0_value: u128  = game_state.score_0.into() * POW_2_64;
+        let score_1_value: u128  = game_state.score_1.into() * POW_2_72;
+        let first_felt: felt252  = (turn_value + score_0_value + score_1_value).into();
+
+        //Other felts
+        let second_felt: felt252 = game_state.paddle_0.into();
+        let third_felt: felt252  = game_state.paddle_1.into();
+        let fourth_felt: felt252 = game_state.ball.into();
+
+        let first_hash: felt252  = LegacyHash::hash(first_felt, second_felt);
+        let second_hash: felt252 = LegacyHash::hash(first_hash, third_felt);
+        let final_hash: felt252  = LegacyHash::hash(second_hash, fourth_felt);
+
+        final_hash
     }
 }

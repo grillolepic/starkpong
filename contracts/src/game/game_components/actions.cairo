@@ -11,4 +11,3 @@ struct TurnAction {
     player_number: u8,
     action: Action
 }
-

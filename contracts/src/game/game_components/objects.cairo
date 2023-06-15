@@ -19,7 +19,7 @@ const POW_2_66: u128 = 73786976294838206464;
 //                            BALL
 //***********************************************************//
 
-#[derive(Drop, Serde)]
+#[derive(Drop, Copy, Serde)]
 struct Ball {
     x: u16,
     y: u16,
@@ -85,7 +85,7 @@ impl StorageAccessBallImpl of StorageAccess<Ball> {
 //                          PADDLE
 //***********************************************************//
 
-#[derive(Drop, Serde)]
+#[derive(Drop, Copy, Serde)]
 struct Paddle {
     y: u16,
     size: u16,
