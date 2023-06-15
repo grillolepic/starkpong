@@ -44,18 +44,6 @@ impl IntoGameRoomStatusFelt252Impl of Into<felt252, GameRoomStatus> {
     }
 }
 
-//    impl SerdeGameRoomStatusImpl of Serde<GameRoomStatus> {
-//        fn serialize(self: @GameRoomStatus, ref output: Array<felt252>) {
-//            let game_room_status = *self;
-//            let felt_value: felt252 = game_room_status.into();
-//            output.append(felt_value);
-//        }
-//        fn deserialize(ref serialized: Span<felt252>) -> Option<GameRoomStatus> {
-//            let felt_value: felt252 = *serialized.at(0);
-//            Option::Some(felt_value.into())
-//        }
-//    }
-
 impl StorageAccessGameRoomStatusImpl of StorageAccess<GameRoomStatus> {
     fn write(address_domain: u32, base: StorageBaseAddress, value: GameRoomStatus) -> SyscallResult<()> {
         storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), value.into());

@@ -36,6 +36,13 @@ fn initial_game_state() -> GameState {
         }
 }
 
+fn limit_check(game_state: @GameState) -> bool {
+    let state = *game_state;
+
+    true
+}
+
+
 
 fn randomize_ball_velocity(seed: u64) -> (u16, u16, bool, bool) {
     (10_u16, 10_u16, false, false)
