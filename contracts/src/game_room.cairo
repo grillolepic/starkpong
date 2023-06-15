@@ -13,6 +13,7 @@ mod GameRoom {
     use option::OptionTrait;
     use zeroable::Zeroable;
     use traits::{Into, TryInto};
+    use ecdsa::check_ecdsa_signature;
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
     use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
     use stark_pong::utils::game_room_status::{GameRoomStatus, StorageAccessGameRoomStatusImpl};
