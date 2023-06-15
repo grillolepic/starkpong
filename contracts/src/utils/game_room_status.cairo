@@ -1,5 +1,6 @@
 use serde::Serde;
 use array::ArrayTrait;
+use core::array::SpanTrait;
 use option::OptionTrait;
 use traits::{Into, TryInto};
 use result::{ResultTrait, ResultTraitImpl};
@@ -7,7 +8,7 @@ use starknet::{StorageAccess, StorageBaseAddress, SyscallResult};
 use starknet::{storage_read_syscall, storage_write_syscall, storage_address_from_base_and_offset};
 use starknet::{ContractAddress, Felt252TryIntoContractAddress};
 
-#[derive(PartialEq, Drop)]
+#[derive(PartialEq, Serde, Copy, Drop)]
 enum GameRoomStatus {
     WaitingForPlayers: (),
     InProgress: (),
@@ -16,37 +17,53 @@ enum GameRoomStatus {
     Closed: ()
 }
 
+impl IntoFelt252GameRoomStatusImpl of Into<GameRoomStatus, felt252> {
+    fn into(self: GameRoomStatus) -> felt252 {
+        match self {
+            GameRoomStatus::WaitingForPlayers(()) => 0,
+            GameRoomStatus::InProgress(()) => 1,
+            GameRoomStatus::Finished(()) => 2,
+            GameRoomStatus::Disputed(()) => 3,
+            GameRoomStatus::Closed(()) => 4
+        }
+    }
+}
+
+impl IntoGameRoomStatusFelt252Impl of Into<felt252, GameRoomStatus> {
+    fn into(self: felt252) -> GameRoomStatus {
+        if (self == 0) {
+            return GameRoomStatus::WaitingForPlayers(());
+        } else if (self == 1) {
+            return GameRoomStatus::InProgress(());
+        } else if (self == 2) {
+            return GameRoomStatus::Finished(());
+        } else if (self == 3) {
+            return GameRoomStatus::Disputed(());
+        }
+        GameRoomStatus::Closed(())
+    }
+}
+
+//    impl SerdeGameRoomStatusImpl of Serde<GameRoomStatus> {
+//        fn serialize(self: @GameRoomStatus, ref output: Array<felt252>) {
+//            let game_room_status = *self;
+//            let felt_value: felt252 = game_room_status.into();
+//            output.append(felt_value);
+//        }
+//        fn deserialize(ref serialized: Span<felt252>) -> Option<GameRoomStatus> {
+//            let felt_value: felt252 = *serialized.at(0);
+//            Option::Some(felt_value.into())
+//        }
+//    }
+
 impl StorageAccessGameRoomStatusImpl of StorageAccess<GameRoomStatus> {
     fn write(address_domain: u32, base: StorageBaseAddress, value: GameRoomStatus) -> SyscallResult<()> {
-        match value {
-            GameRoomStatus::WaitingForPlayers(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 0_u8.into()),
-            GameRoomStatus::InProgress(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 1_u8.into()),
-            GameRoomStatus::Finished(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 2_u8.into()),
-            GameRoomStatus::Disputed(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 3_u8.into()),
-            GameRoomStatus::Closed(()) => storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), 4_u8.into())
-        }
-        
+        storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8), value.into());
         SyscallResult::Ok(())
     }
 
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<GameRoomStatus> {
-        let mut status_value: u8 = storage_read_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8))?.try_into().unwrap();
-        
-        if (status_value == 0) {
-            return Result::Ok(GameRoomStatus::WaitingForPlayers(()));
-        } else if (status_value == 1) {
-            return Result::Ok(GameRoomStatus::InProgress(()));
-        } else if (status_value == 2) {
-            return Result::Ok(GameRoomStatus::Finished(()));
-        } else if (status_value == 3) {
-            return Result::Ok(GameRoomStatus::Disputed(()));
-        } else if (status_value == 4) {
-            return Result::Ok(GameRoomStatus::Closed(()));
-        }
-
-        let mut error_msg = ArrayTrait::<felt252>::new();
-        error_msg.append('INVALID_STATUS_VALUE');
-        
-        SyscallResult::Err(error_msg)
+        let mut stored_value = storage_read_syscall(address_domain, storage_address_from_base_and_offset(base, 0_u8))?;
+        Result::Ok(stored_value.into())
     }
 }

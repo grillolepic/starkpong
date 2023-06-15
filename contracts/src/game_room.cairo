@@ -16,21 +16,20 @@ mod GameRoom {
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
     use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
     use stark_pong::utils::game_room_status::{GameRoomStatus, StorageAccessGameRoomStatusImpl};
+    use stark_pong::game::{initial_game_state};
     use stark_pong::game::game_components::objects::{Paddle, Ball};
+    use stark_pong::game::game_components::state::{GameState};
     use stark_pong::game::game_components::actions::TurnAction;
     use stark_pong::game_room_factory::{IGameRoomFactoryDispatcher, IGameRoomFactoryDispatcherTrait};
     use stark_pong::game_token::{IERC20Dispatcher, IERC20DispatcherTrait};
 
     struct Storage {
         _factory_address: ContractAddress,
+        _players: LegacyMap<u8, Player>,
         _status: GameRoomStatus,
         _deadline: u64,
         _wager: u256,
-        _left_player: u8,
-        _players: LegacyMap<u8, Player>,
-        _score: LegacyMap<u8, u8>,
-        _paddles: LegacyMap<u8, Paddle>,
-        _ball: Ball
+        _state: GameState
     }
 
     impl GameRoomImpl of IGameRoom {
@@ -64,9 +63,9 @@ mod GameRoom {
         _wager::write(wager);
 
         let block_timestamp = get_block_timestamp();
-        _left_player::write((block_timestamp % 2_u64).try_into().unwrap());
+        let player_number: u8 = (block_timestamp % 2_u64).try_into().unwrap();
 
-        _players::write(0_u8, Player {
+        _players::write(player_number, Player {
             address: player_address,
             offchain_public_key: offchain_public_key
         });
@@ -95,7 +94,25 @@ mod GameRoom {
     //                      VIEW FUNCTIONS
     //***********************************************************//
     
+    #[view]
+    fn status() -> (GameRoomStatus, u64) {
+        (_status::read(), _deadline::read())
+    }
 
+    #[view]
+    fn game_state() -> GameState {
+        _state::read()
+    }
+
+    #[view]
+    fn players() -> (Player, Player) {
+        (_players::read(0_u8), _players::read(1_u8))
+    }
+
+    #[view]
+    fn wager() -> u256 {
+        _wager::read()
+    }
 
     //***********************************************************//
     //         JOIN & EXIT GAME ROOM EXTERNAL FUNCTIONS
@@ -109,12 +126,17 @@ mod GameRoom {
         assert_status(GameRoomStatus::WaitingForPlayers(()));
         
         let player_address = get_caller_address();
-        assert(player_address != _players::read(0_u8).address, 'SAME_PLAYER');
+
+        let mut other_player_number = 0_u8;
+        if (_players::read(0_u8).address.is_zero()) {
+            other_player_number = 1_u8;
+        }
+        assert(player_address != _players::read(other_player_number).address, 'SAME_PLAYER');
 
         _send_wager_to_game_room(player_address);
-        _set_deadline(60_u64);
 
-        _players::write(1_u8, Player {
+        let player_number: u8 = if (other_player_number == 0_u8) { 1_u8 } else { 0_u8 };
+        _players::write(player_number, Player {
             address: player_address,
             offchain_public_key: offchain_public_key
         });
@@ -164,7 +186,12 @@ mod GameRoom {
     //              GAME STATUS INTERNAL FUNCTIONS
     //***********************************************************//
 
-    fn _start_game() {}
+    fn _start_game() {
+        _status::write(GameRoomStatus::InProgress(()));
+        _set_deadline(60_u64);
+        _state::write(initial_game_state());
+        GameStarted();
+    }
 
     fn _finish_game() {}
 

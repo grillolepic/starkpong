@@ -6,7 +6,7 @@ use starknet::{StorageAccess, StorageBaseAddress, SyscallResult};
 use starknet::{storage_read_syscall, storage_write_syscall, storage_address_from_base_and_offset};
 use starknet::{ContractAddress, Felt252TryIntoContractAddress};
 
-#[derive(Drop)]
+#[derive(Drop, Serde)]
 struct Player {
     address: ContractAddress,
     offchain_public_key: ContractAddress
