@@ -14,6 +14,7 @@ mod GameRoomFactory {
     use starknet::{ContractAddress, ClassHash, get_caller_address, get_contract_address};
     use starknet::syscalls::deploy_syscall;
     use starknet::syscalls::SyscallResult;
+    use starknet::replace_class_syscall;
     use zeroable::Zeroable;
     use traits::TryInto;
     use result::ResultTrait;
@@ -27,15 +28,17 @@ mod GameRoomFactory {
         _game_token: ContractAddress,
         _game_room_classhash: ClassHash,
         _player_game_room: LegacyMap<ContractAddress, ContractAddress>,
-        _game_room_count: u256
+        _game_room_count: u256,
+        _fee: u128
     }
 
     #[constructor]
-    fn constructor(token: ContractAddress, game_room_classhash: ClassHash) {
+    fn constructor(token: ContractAddress, game_room_classhash: ClassHash, fee: u128) {
         let caller: ContractAddress = get_caller_address();
         _transfer_ownership(caller);
         _game_token::write(token);
         _game_room_count::write(0_u256);
+        _fee::write(fee);
     }
 
     //***********************************************************//
@@ -46,7 +49,7 @@ mod GameRoomFactory {
     fn OwnershipTransferred(previous_owner: ContractAddress, new_owner: ContractAddress) {}
     
     #[event]
-    fn GameRoomCreated(game_room: ContractAddress, player: ContractAddress, wager: u256) {}
+    fn GameRoomCreated(game_room: ContractAddress, player: ContractAddress, wager: u256, fee: u128) {}
 
     //***********************************************************//
     //                   IMPL FOR CONTRACT CALL
@@ -89,6 +92,11 @@ mod GameRoomFactory {
         _game_room_count::read()
     }
 
+    #[view]
+    fn fee() -> u128 {
+        _fee::read()
+    }
+
     //***********************************************************//
     //          EXTERNAL GAME ROOM MANAGMENT FUNCTIONS              
     //***********************************************************//
@@ -103,9 +111,9 @@ mod GameRoomFactory {
         let new_game_room_address = _deploy_game_room(player_address, offchain_public_key, wager);
 
         _send_wager_to_game_room(player_address, wager, new_game_room_address);
-
         _player_game_room::write(player_address, new_game_room_address);
-        GameRoomCreated(player_address, new_game_room_address, wager);
+        
+        GameRoomCreated(player_address, new_game_room_address, wager, _fee::read());
     }
 
     //***********************************************************//
@@ -129,12 +137,14 @@ mod GameRoomFactory {
 
     fn _deploy_game_room(player_address: ContractAddress, offchain_public_key: ContractAddress, wager: u256) -> ContractAddress {
         let game_room_classhash = _game_room_classhash::read();
+        let fee = _fee::read();
 
         let mut calldata = ArrayTrait::<felt252>::new();
         get_contract_address().serialize(ref calldata);
         player_address.serialize(ref calldata);
         offchain_public_key.serialize(ref calldata);
         wager.serialize(ref calldata);
+        fee.serialize(ref calldata);
 
         let game_room_count = _game_room_count::read();
 
@@ -201,12 +211,44 @@ mod GameRoomFactory {
     }
 
     //***********************************************************//
+    //             TOKEN/FEE WITHDRAWAL FUNCTIONS        
+    //***********************************************************//
+
+    #[external]
+    fn set_fee(fee: u128) {
+        assert_only_owner();
+        _fee::write(fee);
+    }
+
+    #[external]
+    fn withdraw(token_address: ContractAddress) {
+        let contract_address = get_contract_address();
+        let owner_address = _owner::read();
+        let token = IERC20Dispatcher { contract_address: token_address };
+        let balance = token.balance_of(contract_address);
+
+        assert(token.transfer(owner_address, balance), 'TOKEN_TRANSFER_FAILED');
+    }
+
+    #[external]
+    fn withdraw_game_token() {
+        let game_token: ContractAddress = _game_token::read();
+        withdraw(game_token);
+    }
+
+    #[external]
+    fn withdraw_eth() {
+        let eth_token: ContractAddress = (0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7).try_into().unwrap();
+        withdraw(eth_token);
+    }
+
+    //***********************************************************//
     //                      UPGRADEABILITY
     //***********************************************************//
 
     #[external]
     fn upgrade(new_class_hash: ClassHash) {
         assert_only_owner();
-        //replace_class_syscall(new_class_hash);
+        replace_class_syscall(new_class_hash);
     }
 }

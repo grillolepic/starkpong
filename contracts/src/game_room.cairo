@@ -35,6 +35,7 @@ mod GameRoom {
         _status: GameRoomStatus,
         _deadline: u64,
         _wager: u256,
+        _fee: u128,
         _state: GameState
     }
 
@@ -60,13 +61,15 @@ mod GameRoom {
         factory_address: ContractAddress,
         player_address: ContractAddress,
         offchain_public_key: ContractAddress,
-        wager: u256
+        wager: u256,
+        fee: u128
     ) {
         _set_deadline(30_u64);
 
         _factory_address::write(factory_address);
         _status::write(GameRoomStatus::WaitingForPlayers(()));
         _wager::write(wager);
+        _fee::write(fee);
 
         let block_timestamp = get_block_timestamp();
         let player_number: u8 = (block_timestamp % 2_u64).try_into().unwrap();
@@ -207,6 +210,10 @@ mod GameRoom {
                         );
 
                         new_game_state = new_game_state.apply_turn(turn_action);
+
+                        if (new_game_state.winner().is_some()) {
+                            break ();
+                        }
                     }
                 },
                 Option::None(_) => {
@@ -234,6 +241,12 @@ mod GameRoom {
 
     #[external]
     fn dispute_partial_result() {
+        assert_deadline();
+        assert_status(GameRoomStatus::Disputed(()));
+    }
+
+    #[external]
+    fn confirm_partial_result() {
         assert_deadline();
         assert_status(GameRoomStatus::Disputed(()));
     }
@@ -286,12 +299,14 @@ mod GameRoom {
     }
 
     fn _finish_game() {
-        //_send_wager_to_winner(winner);
+        let game_state = _state::read();
+        let winner = game_state.winner().unwrap();
+        _pay_prize_and_fees(winner);
+        _status::write(GameRoomStatus::Finished(()));
+        GameFinished();
     }
 
-    fn _calculate_optimal_result() {
-        
-    }
+    fn _calculate_optimal_result() {}
 
     //***********************************************************//
     //                 UTILS INTERNAL FUNCTIONS                 
@@ -322,7 +337,6 @@ mod GameRoom {
 
     fn _send_wager_to_game_room(player_address: ContractAddress) {
         let wager = _wager::read();
-
         if (wager > 0_u256) {
             let contract_address = get_contract_address();
             let factory = IGameRoomFactoryDispatcher { contract_address: _factory_address::read() };
@@ -345,12 +359,33 @@ mod GameRoom {
         let player_1 = _players::read(1_u8);
         let total_balance = game_token.balance_of(contract_address);
 
-        if (player_1.address.is_zero()) {
-            assert(game_token.transfer(player_0.address, total_balance), 'REFUND_FAILED');
+        if (player_1.address.is_zero() | player_0.address.is_zero()) {
+            let creator_address = if (player_0.address.is_zero()) { player_1.address } else { player_0.address };
+            assert(game_token.transfer(creator_address, total_balance), 'REFUND_FAILED');
         } else {
             let balance_for_each = total_balance / 2_u256;
             assert(game_token.transfer(player_0.address, balance_for_each), 'REFUND_FAILED');
             assert(game_token.transfer(player_1.address, balance_for_each), 'REFUND_FAILED');
+        }
+    }
+
+    fn _pay_prize_and_fees(player_number: u8) {
+        if (_wager::read() > 0_u256) {
+            let contract_address = get_contract_address();
+            let factory_address = _factory_address::read();
+            let factory = IGameRoomFactoryDispatcher { contract_address: factory_address };
+            let game_token_address = factory.game_token();
+            let game_token = IERC20Dispatcher { contract_address: game_token_address };
+
+            let winner = _players::read(player_number);
+            let total_balance = game_token.balance_of(contract_address);
+
+            let fee: felt252 = _fee::read().into();
+            let fees_to_factory_contract: u256 = (total_balance / 10000_u256) * fee.into();
+            let payment_to_winner: u256 = total_balance - fees_to_factory_contract;
+
+            assert(game_token.transfer(winner.address, payment_to_winner), 'PRIZE_TRANSFER_FAILED');
+            assert(game_token.transfer(factory_address, fees_to_factory_contract), 'FEE_PAYMENT_FAILED');
         }
     }
 }
