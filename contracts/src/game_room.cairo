@@ -15,14 +15,15 @@ mod GameRoom {
     use zeroable::Zeroable;
     use traits::{Into, TryInto};
     use array::{ArrayTrait, SpanTrait};
-    use ecdsa::check_ecdsa_signature;
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
     use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
     use stark_pong::utils::game_room_status::{GameRoomStatus, StorageAccessGameRoomStatusImpl};
     use stark_pong::utils::signature::{Signature};
-    use stark_pong::game::{initial_game_state};
+    use stark_pong::game::{initial_game_state, player_number_from_turn};
     use stark_pong::game::game_components::objects::{Paddle, Ball};
-    use stark_pong::game::game_components::state::{GameState, GameStateTrait};
+    use stark_pong::game::game_components::state::{
+        GameState, GameStateTrait, Checkpoint, CheckpointTrait
+    };
     use stark_pong::game::game_components::actions::{TurnAction, TurnActionTrait};
     use stark_pong::game_room_factory::{
         IGameRoomFactoryDispatcher, IGameRoomFactoryDispatcherTrait
@@ -36,7 +37,8 @@ mod GameRoom {
         _deadline: u64,
         _wager: u256,
         _fee: u128,
-        _state: GameState
+        _state: GameState,
+        _optimal_predictable_result: bool
     }
 
     impl GameRoomImpl of IGameRoom {
@@ -50,7 +52,7 @@ mod GameRoom {
                 GameRoomStatus::WaitingForPlayers(()) => before_deadlie,
                 GameRoomStatus::InProgress(()) => before_deadlie,
                 GameRoomStatus::Finished(()) => false,
-                GameRoomStatus::Disputed(()) => before_deadlie,
+                GameRoomStatus::PartialExit(()) => before_deadlie,
                 GameRoomStatus::Closed(()) => false
             }
         }
@@ -97,6 +99,9 @@ mod GameRoom {
     fn PartialExit() {}
 
     #[event]
+    fn PartialResultDisputed() {}
+
+    #[event]
     fn PartialGameFinished() {}
 
     #[event]
@@ -134,22 +139,12 @@ mod GameRoom {
     fn join_game_room(offchain_public_key: ContractAddress) {
         assert_deadline();
         assert_status(GameRoomStatus::WaitingForPlayers(()));
+        assert(_get_caller_player_number().is_none(), 'PLAYER_ALREADY_JOINED');
 
         let player_address = get_caller_address();
-
-        let mut other_player_number = 0_u8;
-        if (_players::read(0_u8).address.is_zero()) {
-            other_player_number = 1_u8;
-        }
-        assert(player_address != _players::read(other_player_number).address, 'SAME_PLAYER');
-
         _send_wager_to_game_room(player_address);
 
-        let player_number: u8 = if (other_player_number == 0_u8) {
-            1_u8
-        } else {
-            0_u8
-        };
+        let player_number: u8 = _get_empty_player_number().unwrap();
         _players::write(
             player_number,
             Player { address: player_address, offchain_public_key: offchain_public_key }
@@ -162,7 +157,7 @@ mod GameRoom {
     fn close_game_room() {
         assert_deadline();
         assert_status(GameRoomStatus::WaitingForPlayers(()));
-        assert_player(0_u8);
+        assert_player(Option::Some(0_u8));
 
         _refund_wagers();
         _status::write(GameRoomStatus::Closed(()));
@@ -173,27 +168,102 @@ mod GameRoom {
     //***********************************************************//
 
     #[external]
-    fn set_game_state(new_game_state: GameState, signature_0: Signature, signature_1: Signature) {
+    fn set_checkpoint(checkpoint: Checkpoint) {
         assert_deadline();
         assert_status(GameRoomStatus::InProgress(()));
 
-        _update_game_state(new_game_state, signature_0, signature_1);
-
-        match new_game_state.winner() {
-            Option::Some(winner) => {
-                _finish_game();
-            },
-            Option::None(()) => {}
-        };
+        _set_checkpoint(checkpoint);
+        if (checkpoint.state.winner().is_some()) {
+            _finish_game();
+        }
     }
 
     #[external]
     fn advance_game_state(mut turns: Array<TurnAction>) {
         assert_deadline();
         assert_status(GameRoomStatus::InProgress(()));
+        assert(turns.len() > 0, 'EMPTY_TURNS');
 
-        let mut processed_turns: usize = 0;
+        _advance_game_state(turns);
+
+        let new_game_state = _state::read();
+        if (new_game_state.winner().is_some()) {
+            _finish_game();
+        }
+    }
+
+    #[external]
+    fn exit_with_partial_result(
+        checkpoint: Checkpoint, mut turns: Array<TurnAction>, use_optimal_predictable_result: bool
+    ) {
+        assert_deadline();
+        assert_player(Option::None(()));
+        assert_status(GameRoomStatus::InProgress(()));
+
+        if (checkpoint.state.turn > _state::read().turn) {
+            _set_checkpoint(checkpoint);
+        }
+
+        if (turns.len() > 0) {
+            _advance_game_state(turns);
+        }
+
+        _partial_exit(use_optimal_predictable_result);
+    }
+
+    #[external]
+    fn dispute_partial_result(evidence: TurnAction) {
+        assert_deadline();
+        assert_status(GameRoomStatus::PartialExit(()));
+        assert_player_can_dispute();
+        _dispute_partial_result(evidence);
+    }
+
+    #[external]
+    fn confirm_partial_result() {
+        assert_deadline();
+        assert_status(GameRoomStatus::PartialExit(()));
+        assert_player_can_dispute();
+        _finish_partial_exit();
+    }
+
+    #[external]
+    fn finish_exit_with_partial_result() {
+        assert_past_deadline();
+        assert_status(GameRoomStatus::PartialExit(()));
+        _finish_partial_exit();
+    }
+
+    //***********************************************************//
+    //              GAME STATUS INTERNAL FUNCTIONS
+    //***********************************************************//
+
+    fn _start_game() {
+        _status::write(GameRoomStatus::InProgress(()));
+        _set_deadline(60_u64);
+        _state::write(initial_game_state());
+        GameStarted();
+    }
+
+    fn _set_checkpoint(checkpoint: Checkpoint) {
+        let new_game_state_hash = checkpoint.state.hash();
+        let player_0 = _players::read(0_u8);
+        let player_1 = _players::read(1_u8);
+
+        assert(checkpoint.state.is_valid(@_state::read()), 'INVALID_GAME_STATE');
+        assert(
+            checkpoint
+                .verify_signatures(player_0.offchain_public_key, player_1.offchain_public_key),
+            'INVALID_CHECKPOINT'
+        );
+
+        _state::write(checkpoint.state);
+        GameStateUpdated(checkpoint.state);
+    }
+
+    fn _advance_game_state(mut turns: Array<TurnAction>) {
         let mut new_game_state = _state::read();
+
         loop {
             match turns.pop_front() {
                 Option::Some(turn_action) => {
@@ -201,12 +271,12 @@ mod GameRoom {
                     assert(turn_action.turn <= next_turn, 'NON_CONSECUTIVE_TURN');
 
                     if (turn_action.turn == next_turn) {
-                        let player_number = _player_number_from_turn(next_turn);
+                        let player_number = player_number_from_turn(next_turn);
                         let player = _players::read(player_number);
 
                         assert(
                             turn_action.verify_signature(player.offchain_public_key),
-                            'INVALID_SIGNATURE'
+                            'INVALID_TURN_ACTION'
                         );
 
                         new_game_state = new_game_state.apply_turn(turn_action);
@@ -224,98 +294,110 @@ mod GameRoom {
 
         _state::write(new_game_state);
         GameStateUpdated(new_game_state);
-
-        match new_game_state.winner() {
-            Option::Some(winner) => {
-                _finish_game();
-            },
-            Option::None(()) => {}
-        };
-    }
-
-    #[external]
-    fn exit_with_partial_result() {
-        assert_deadline();
-        assert_status(GameRoomStatus::InProgress(()));
-    }
-
-    #[external]
-    fn dispute_partial_result() {
-        assert_deadline();
-        assert_status(GameRoomStatus::Disputed(()));
-    }
-
-    #[external]
-    fn confirm_partial_result() {
-        assert_deadline();
-        assert_status(GameRoomStatus::Disputed(()));
-    }
-
-    //***********************************************************//
-    //              GAME STATUS INTERNAL FUNCTIONS
-    //***********************************************************//
-
-    fn _start_game() {
-        _status::write(GameRoomStatus::InProgress(()));
-        _set_deadline(60_u64);
-        _state::write(initial_game_state());
-        GameStarted();
-    }
-
-    fn _update_game_state(
-        new_game_state: GameState, signature_0: Signature, signature_1: Signature
-    ) {
-        let new_game_state_hash = new_game_state.hash();
-        let player_0 = _players::read(0_u8);
-        let player_1 = _players::read(1_u8);
-
-        assert(new_game_state.is_valid(@_state::read()), 'INVALID_GAME_STATE');
-        assert(
-            check_ecdsa_signature(
-                new_game_state_hash,
-                player_0.offchain_public_key.into(),
-                signature_0.r,
-                signature_0.s
-            ),
-            'INVALID_SIGNATURE_0'
-        );
-        assert(
-            check_ecdsa_signature(
-                new_game_state_hash,
-                player_1.offchain_public_key.into(),
-                signature_1.r,
-                signature_1.s
-            ),
-            'INVALID_SIGNATURE_1'
-        );
-
-        _state::write(new_game_state);
-        GameStateUpdated(new_game_state);
-    }
-
-    fn _player_number_from_turn(turn: u64) -> u8 {
-        let rem = turn % 2_u64;
-        rem.try_into().unwrap()
     }
 
     fn _finish_game() {
         let game_state = _state::read();
         let winner = game_state.winner().unwrap();
-        _pay_prize_and_fees(winner);
+        _pay_prize_and_fees(Option::Some(winner));
         _status::write(GameRoomStatus::Finished(()));
         GameFinished();
     }
 
-    fn _calculate_optimal_result() {}
+    fn _partial_exit(use_optimal_predictable_result: bool) {
+        //The last played signed turn to update the state must be by the player calling for the exit
+        let player_number = _get_caller_player_number().unwrap();
+        let player_number_from_state_turn = player_number_from_turn(_state::read().turn);
+        assert(player_number == player_number_from_state_turn, 'INVALID_TURN_FOR_EXIT');
+
+        _optimal_predictable_result::write(use_optimal_predictable_result);
+        _status::write(GameRoomStatus::PartialExit(()));
+
+        _set_deadline(60_u64);
+        PartialExit();
+    }
+
+    fn _dispute_partial_result(evidence: TurnAction) {
+        //Disputing a result requires a signed turn from the Player who exited the game,
+        //which is higher than the last turn saved to the game state
+        let exited_player_number = player_number_from_turn(_state::read().turn);
+        let exited_player = _players::read(exited_player_number);
+        assert(
+            evidence.verify_signature(exited_player.offchain_public_key),
+            'INVALID_EVIDENCE_SIGNATURE'
+        );
+        assert(evidence.turn > _state::read().turn, 'INVALID_EVIDENCE_TURN');
+
+        //No matter the result, if a player disputes a results, that player receives the prize
+        _pay_prize_and_fees(_get_caller_player_number());
+
+        _status::write(GameRoomStatus::Finished(()));
+        PartialResultDisputed();
+        PartialGameFinished();
+    }
+
+    fn _finish_partial_exit() {
+        if (_optimal_predictable_result::read()) {
+            let optimal_predictable_result = _state::read().calculate_optimal_predictable_result();
+            _state::write(optimal_predictable_result);
+        }
+
+        let winner = _state::read().winner();
+        _pay_prize_and_fees(winner);
+
+        _status::write(GameRoomStatus::Finished(()));
+        PartialGameFinished();
+    }
+
 
     //***********************************************************//
     //                 UTILS INTERNAL FUNCTIONS                 
     //***********************************************************//
 
-    fn assert_player(player_number: u8) {
-        let player_address = get_caller_address();
-        let player = _players::read(player_number);
-        assert(player_address == player.address, 'INVALID_PLAYER');
+    fn assert_player(player_number: Option<u8>) {
+        match player_number {
+            Option::Some(player_number) => {
+                let player_address = get_caller_address();
+                let player = _players::read(player_number);
+                assert(player_address == player.address, 'NOT_THE_PLAYER');
+            },
+            Option::None(()) => {
+                assert(_get_caller_player_number().is_some(), 'NOT_A_PLAYER');
+            }
+        }
+    }
+
+    fn _get_caller_player_number() -> Option<u8> {
+        let caller_address = get_caller_address();
+        let player_0 = _players::read(0_u8);
+        let player_1 = _players::read(1_u8);
+        if (player_0.address == caller_address) {
+            return Option::Some(0_u8);
+        }
+        if (player_1.address == caller_address) {
+            return Option::Some(1_u8);
+        }
+        Option::None(())
+    }
+
+    fn _get_empty_player_number() -> Option<u8> {
+        let player_0_address = _players::read(0_u8).address;
+        let player_1_address = _players::read(1_u8).address;
+
+        if (player_0_address.is_zero()) {
+            return Option::Some(0_u8);
+        } else if (player_1_address.is_zero()) {
+            return Option::Some(1_u8);
+        }
+        Option::None(())
+    }
+
+    fn assert_player_can_dispute() {
+        let player_number = _get_caller_player_number();
+        assert(player_number.is_some(), 'NOT_A_PLAYER');
+        assert(
+            player_number.unwrap() != player_number_from_turn(_state::read().turn), 'WRONG_PLAYER'
+        );
     }
 
     fn assert_status(status: GameRoomStatus) {
@@ -327,6 +409,12 @@ mod GameRoom {
         let block_timestamp = get_block_timestamp();
         let deadline = _deadline::read();
         assert(block_timestamp <= deadline, 'DEADLINE');
+    }
+
+    fn assert_past_deadline() {
+        let block_timestamp = get_block_timestamp();
+        let deadline = _deadline::read();
+        assert(block_timestamp > deadline, 'NOT_PAST_DEADLINE');
     }
 
     fn _set_deadline(minutes: u64) {
@@ -360,7 +448,11 @@ mod GameRoom {
         let total_balance = game_token.balance_of(contract_address);
 
         if (player_1.address.is_zero() | player_0.address.is_zero()) {
-            let creator_address = if (player_0.address.is_zero()) { player_1.address } else { player_0.address };
+            let creator_address = if (player_0.address.is_zero()) {
+                player_1.address
+            } else {
+                player_0.address
+            };
             assert(game_token.transfer(creator_address, total_balance), 'REFUND_FAILED');
         } else {
             let balance_for_each = total_balance / 2_u256;
@@ -369,7 +461,7 @@ mod GameRoom {
         }
     }
 
-    fn _pay_prize_and_fees(player_number: u8) {
+    fn _pay_prize_and_fees(player_number: Option<u8>) {
         if (_wager::read() > 0_u256) {
             let contract_address = get_contract_address();
             let factory_address = _factory_address::read();
@@ -377,15 +469,35 @@ mod GameRoom {
             let game_token_address = factory.game_token();
             let game_token = IERC20Dispatcher { contract_address: game_token_address };
 
-            let winner = _players::read(player_number);
             let total_balance = game_token.balance_of(contract_address);
-
             let fee: felt252 = _fee::read().into();
             let fees_to_factory_contract: u256 = (total_balance / 10000_u256) * fee.into();
             let payment_to_winner: u256 = total_balance - fees_to_factory_contract;
 
-            assert(game_token.transfer(winner.address, payment_to_winner), 'PRIZE_TRANSFER_FAILED');
-            assert(game_token.transfer(factory_address, fees_to_factory_contract), 'FEE_PAYMENT_FAILED');
+            match player_number {
+                Option::Some(winner) => {
+                    assert(
+                        game_token.transfer(_players::read(winner).address, payment_to_winner),
+                        'PRIZE_TRANSFER_FAILED'
+                    );
+                },
+                Option::None(()) => {
+                    assert(
+                        game_token
+                            .transfer(_players::read(0_u8).address, payment_to_winner / 2_u256),
+                        'REFUND_FAILED'
+                    );
+                    assert(
+                        game_token
+                            .transfer(_players::read(1_u8).address, payment_to_winner / 2_u256),
+                        'REFUND_FAILED'
+                    );
+                }
+            }
+
+            assert(
+                game_token.transfer(factory_address, fees_to_factory_contract), 'FEE_PAYMENT_FAILED'
+            );
         }
     }
 }

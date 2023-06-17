@@ -13,7 +13,7 @@ enum GameRoomStatus {
     WaitingForPlayers: (),
     InProgress: (),
     Finished: (),
-    Disputed: (),
+    PartialExit: (),
     Closed: ()
 }
 
@@ -23,7 +23,7 @@ impl IntoFelt252GameRoomStatusImpl of Into<GameRoomStatus, felt252> {
             GameRoomStatus::WaitingForPlayers(()) => 0,
             GameRoomStatus::InProgress(()) => 1,
             GameRoomStatus::Finished(()) => 2,
-            GameRoomStatus::Disputed(()) => 3,
+            GameRoomStatus::PartialExit(()) => 3,
             GameRoomStatus::Closed(()) => 4
         }
     }
@@ -38,7 +38,7 @@ impl IntoGameRoomStatusFelt252Impl of Into<felt252, GameRoomStatus> {
         } else if (self == 2) {
             return GameRoomStatus::Finished(());
         } else if (self == 3) {
-            return GameRoomStatus::Disputed(());
+            return GameRoomStatus::PartialExit(());
         }
         GameRoomStatus::Closed(())
     }
