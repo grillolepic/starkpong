@@ -6,7 +6,7 @@ A fully-P2P game of PONG over state-channels, secured by StarkNet.
 ## Deployments
 
 ### Alpha-Testnet
-All deployments were compiled/declared/deployed with: **starknet 0.11.2** and **cairo 1.1.0**
+Save for the Cairo0 one, all contracts were compiled/declared/deployed with: **starknet 0.11.2** and **cairo 1.1.0**
 
 **PONG Token:**
 - ClassHash: 0x111630357350e90324b40d6e67c06d687964a6da214c99a7e412dc138fffad7
