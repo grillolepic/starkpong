@@ -34,6 +34,7 @@ mod GameRoom {
         _factory_address: ContractAddress,
         _players: LegacyMap<u8, Player>,
         _status: GameRoomStatus,
+        _random_seed: u64,
         _deadline: u64,
         _wager: u256,
         _fee: u128,
@@ -73,8 +74,11 @@ mod GameRoom {
         _wager::write(wager);
         _fee::write(fee);
 
-        let block_timestamp = get_block_timestamp();
-        let player_number: u8 = (block_timestamp % 2_u64).try_into().unwrap();
+        let random_seed = get_block_timestamp();
+        _random_seed::write(random_seed);
+
+        let seed_mod: felt252 = (random_seed % 2_u64).into();
+        let player_number: u8 = seed_mod.try_into().unwrap();
 
         _players::write(
             player_number,
@@ -96,7 +100,7 @@ mod GameRoom {
     fn GameFinished() {}
 
     #[event]
-    fn PartialExit() {}
+    fn PartialExit(last_turn: u64) {}
 
     #[event]
     fn PartialResultDisputed() {}
@@ -129,6 +133,11 @@ mod GameRoom {
     #[view]
     fn wager() -> u256 {
         _wager::read()
+    }
+
+    #[view]
+    fn random_seed() -> u64 {
+        _random_seed::read()
     }
 
     //***********************************************************//
@@ -306,15 +315,16 @@ mod GameRoom {
 
     fn _partial_exit(use_optimal_predictable_result: bool) {
         //The last played signed turn to update the state must be by the player calling for the exit
+        let last_turn = _state::read().turn;
         let player_number = _get_caller_player_number().unwrap();
-        let player_number_from_state_turn = player_number_from_turn(_state::read().turn);
+        let player_number_from_state_turn = player_number_from_turn(last_turn);
         assert(player_number == player_number_from_state_turn, 'INVALID_TURN_FOR_EXIT');
 
         _optimal_predictable_result::write(use_optimal_predictable_result);
         _status::write(GameRoomStatus::PartialExit(()));
 
         _set_deadline(60_u64);
-        PartialExit();
+        PartialExit(last_turn);
     }
 
     fn _dispute_partial_result(evidence: TurnAction) {
@@ -455,9 +465,14 @@ mod GameRoom {
             };
             assert(game_token.transfer(creator_address, total_balance), 'REFUND_FAILED');
         } else {
-            let balance_for_each = total_balance / 2_u256;
-            assert(game_token.transfer(player_0.address, balance_for_each), 'REFUND_FAILED');
-            assert(game_token.transfer(player_1.address, balance_for_each), 'REFUND_FAILED');
+            let total_balance_252: felt252 = total_balance.try_into().unwrap();
+            let total_balance_128: u128 = total_balance_252.try_into().unwrap();
+            let amount_for_each_player_128: u128 = total_balance_128 / 2_u128;
+            let amount_for_each_player_252: felt252 = amount_for_each_player_128.into();
+            let amount_for_each_player: u256 = amount_for_each_player_252.into();
+
+            assert(game_token.transfer(player_0.address, amount_for_each_player), 'REFUND_FAILED');
+            assert(game_token.transfer(player_1.address, amount_for_each_player), 'REFUND_FAILED');
         }
     }
 
@@ -471,8 +486,21 @@ mod GameRoom {
 
             let total_balance = game_token.balance_of(contract_address);
             let fee: felt252 = _fee::read().into();
-            let fees_to_factory_contract: u256 = (total_balance / 10000_u256) * fee.into();
+
+            let total_balance_252: felt252 = total_balance.try_into().unwrap();
+            let total_balance_128: u128 = total_balance_252.try_into().unwrap();
+            let fees_to_factory_contract_128: u128 = total_balance_128
+                / 10000_u128
+                * fee.try_into().unwrap();
+            let fees_to_factory_contract_252: felt252 = fees_to_factory_contract_128.into();
+            let fees_to_factory_contract: u256 = fees_to_factory_contract_252.into();
+
             let payment_to_winner: u256 = total_balance - fees_to_factory_contract;
+            let payment_to_winner_252: felt252 = payment_to_winner.try_into().unwrap();
+            let payment_to_winner_128: u128 = payment_to_winner_252.try_into().unwrap();
+            let payment_to_winner_half: u128 = payment_to_winner_128 / 2_u128;
+            let payment_to_winner_half_252: felt252 = payment_to_winner_half.into();
+            let payment_to_winner_half: u256 = payment_to_winner_half_252.into();
 
             match player_number {
                 Option::Some(winner) => {
@@ -483,21 +511,22 @@ mod GameRoom {
                 },
                 Option::None(()) => {
                     assert(
-                        game_token
-                            .transfer(_players::read(0_u8).address, payment_to_winner / 2_u256),
+                        game_token.transfer(_players::read(0_u8).address, payment_to_winner_half),
                         'REFUND_FAILED'
                     );
                     assert(
-                        game_token
-                            .transfer(_players::read(1_u8).address, payment_to_winner / 2_u256),
+                        game_token.transfer(_players::read(1_u8).address, payment_to_winner_half),
                         'REFUND_FAILED'
                     );
                 }
             }
 
-            assert(
-                game_token.transfer(factory_address, fees_to_factory_contract), 'FEE_PAYMENT_FAILED'
-            );
+            if (fees_to_factory_contract > 0_u256) {
+                assert(
+                    game_token.transfer(factory_address, fees_to_factory_contract),
+                    'FEE_PAYMENT_FAILED'
+                );
+            }
         }
     }
 }

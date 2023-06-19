@@ -37,6 +37,7 @@ mod GameRoomFactory {
         let caller: ContractAddress = get_caller_address();
         _transfer_ownership(caller);
         _game_token::write(token);
+        _game_room_classhash::write(game_room_classhash);
         _game_room_count::write(0_u256);
         _fee::write(fee);
     }

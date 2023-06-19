@@ -19,7 +19,7 @@ fn initial_game_state() -> GameState {
 }
 
 fn player_number_from_turn(turn: u64) -> u8 {
-    let rem = turn % 2_u64;
+    let rem: felt252 = (turn % 2_u64).into();
     rem.try_into().unwrap()
 }
 

@@ -4,9 +4,10 @@ use array::{ArrayTrait, SpanTrait};
 use option::OptionTrait;
 use traits::{Into, TryInto};
 use starknet::ContractAddress;
-use ecdsa::check_ecdsa_signature;
+//use ecdsa::check_ecdsa_signature;
 use result::{ResultTrait, ResultTraitImpl};
 use stark_pong::utils::signature::{Signature};
+use stark_pong::utils::signature_verification::external_verify;
 
 #[derive(Drop, Serde, Copy)]
 enum Action {
@@ -53,6 +54,9 @@ impl TurnActionTraitImpl of TurnActionTrait {
         let action: felt252 = turn_action.action.into();
         let turn_action_hash = LegacyHash::hash(turn_action.turn.into(), action);
 
-        check_ecdsa_signature(turn_action_hash, player_public_key.into(), turn_action.signature.r, turn_action.signature.s)
+        //EXPERIMENTAL: check_ecdsa_signature(turn_action_hash, player_public_key.into(), turn_action.signature.r, turn_action.signature.s)
+        external_verify(turn_action_hash, player_public_key, turn_action.signature);
+        
+        true
     }
 }
