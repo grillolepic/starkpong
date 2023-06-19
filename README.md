@@ -20,7 +20,7 @@ A fully-P2P game of PONG over state-channels, secured by StarkNet.
 **Game Room:**
 - ClassHash: 0x1a45600054b845ff22a2902d7df4c45e6e7a5ad95c091c63277302ac88357cf
 
-**Game Room Factory: **
+**Game Room Factory:**
 - ClassHash: 0x4a944a9e409fd187c736bfcff2318ee2e50ebf5f1a5b38549b07fbb42388a07
 - ContractAddress: 0x02909102709cbd49f3d5cccc85056bc489c81b09baecdc98f44bb4cb0f7b9a74
 
