@@ -1,0 +1,325 @@
+[
+    {
+        "name": "constructor",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "factory_address",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "player_address",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "offchain_public_key",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "wager",
+                "type": "core::integer::u256"
+            },
+            {
+                "name": "fee",
+                "type": "core::integer::u128"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "stark_pong::utils::game_room_status::GameRoomStatus",
+        "type": "enum",
+        "variants": [
+            {
+                "name": "WaitingForPlayers",
+                "type": "()"
+            },
+            {
+                "name": "InProgress",
+                "type": "()"
+            },
+            {
+                "name": "Finished",
+                "type": "()"
+            },
+            {
+                "name": "PartialExit",
+                "type": "()"
+            },
+            {
+                "name": "Closed",
+                "type": "()"
+            }
+        ]
+    },
+    {
+        "name": "status",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "(stark_pong::utils::game_room_status::GameRoomStatus, core::integer::u64)"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "name": "stark_pong::game::game_components::state::GameState",
+        "type": "struct",
+        "members": [
+            {
+                "name": "turn",
+                "type": "core::integer::u64"
+            },
+            {
+                "name": "score_0",
+                "type": "core::integer::u8"
+            },
+            {
+                "name": "score_1",
+                "type": "core::integer::u8"
+            },
+            {
+                "name": "paddle_0",
+                "type": "stark_pong::game::game_components::objects::Paddle"
+            },
+            {
+                "name": "paddle_1",
+                "type": "stark_pong::game::game_components::objects::Paddle"
+            },
+            {
+                "name": "ball",
+                "type": "stark_pong::game::game_components::objects::Ball"
+            }
+        ]
+    },
+    {
+        "name": "game_state",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "stark_pong::game::game_components::state::GameState"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "name": "stark_pong::utils::player::Player",
+        "type": "struct",
+        "members": [
+            {
+                "name": "address",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "offchain_public_key",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ]
+    },
+    {
+        "name": "players",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "(stark_pong::utils::player::Player, stark_pong::utils::player::Player)"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "name": "wager",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "core::integer::u256"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "name": "random_seed",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "core::integer::u64"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "name": "join_game_room",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "offchain_public_key",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "close_game_room",
+        "type": "function",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "stark_pong::game::game_components::state::Checkpoint",
+        "type": "struct",
+        "members": [
+            {
+                "name": "state",
+                "type": "stark_pong::game::game_components::state::GameState"
+            },
+            {
+                "name": "signature_0",
+                "type": "stark_pong::utils::signature::Signature"
+            },
+            {
+                "name": "signature_1",
+                "type": "stark_pong::utils::signature::Signature"
+            }
+        ]
+    },
+    {
+        "name": "set_checkpoint",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "checkpoint",
+                "type": "stark_pong::game::game_components::state::Checkpoint"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "stark_pong::game::game_components::actions::TurnAction",
+        "type": "struct",
+        "members": [
+            {
+                "name": "turn",
+                "type": "core::integer::u64"
+            },
+            {
+                "name": "action",
+                "type": "stark_pong::game::game_components::actions::Action"
+            },
+            {
+                "name": "signature",
+                "type": "stark_pong::utils::signature::Signature"
+            }
+        ]
+    },
+    {
+        "name": "advance_game_state",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "turns",
+                "type": "core::array::Array::<stark_pong::game::game_components::actions::TurnAction>"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "exit_with_partial_result",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "checkpoint",
+                "type": "stark_pong::game::game_components::state::Checkpoint"
+            },
+            {
+                "name": "turns",
+                "type": "core::array::Array::<stark_pong::game::game_components::actions::TurnAction>"
+            },
+            {
+                "name": "use_optimal_predictable_result",
+                "type": "core::bool"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "dispute_partial_result",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "evidence",
+                "type": "stark_pong::game::game_components::actions::TurnAction"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "confirm_partial_result",
+        "type": "function",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "finish_exit_with_partial_result",
+        "type": "function",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "name": "GameStarted",
+        "type": "event",
+        "inputs": []
+    },
+    {
+        "name": "GameStateUpdated",
+        "type": "event",
+        "inputs": [
+            {
+                "name": "state",
+                "type": "stark_pong::game::game_components::state::GameState"
+            }
+        ]
+    },
+    {
+        "name": "GameFinished",
+        "type": "event",
+        "inputs": []
+    },
+    {
+        "name": "PartialExit",
+        "type": "event",
+        "inputs": [
+            {
+                "name": "last_turn",
+                "type": "core::integer::u64"
+            }
+        ]
+    },
+    {
+        "name": "PartialResultDisputed",
+        "type": "event",
+        "inputs": []
+    },
+    {
+        "name": "PartialGameFinished",
+        "type": "event",
+        "inputs": []
+    },
+    {
+        "name": "GameRoomClosed",
+        "type": "event",
+        "inputs": []
+    }
+]

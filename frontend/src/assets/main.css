@@ -1,35 +1,109 @@
 @import './base.css';
+@import './get_starknet.css';
+@import './button.css';
 
 #app {
-  max-width: 1280px;
+  width: 100vw;
+  height: 100vh;
   margin: 0 auto;
-  padding: 2rem;
-
+  padding: 0;
   font-weight: normal;
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  align-items: center;
+  font-family: 'Quicksand', sans-serif;
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
+@media only screen and (max-width: 549px) {
   #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    padding: 0rem 0.5rem;
   }
+}
+
+.logo {
+  font-family: 'Monoton', cursive;
+}
+
+.max-width {
+  width: 100vw;
+  max-width: var(--max-width);
+}
+
+.max-height {
+  height: 100vh;
+}
+
+.max-height-without-navbar {
+  height: calc(100vh - var(--navbar-height) - var(--navbar-top-margin) - var(--footer-height) - var(--footer-bottom-margin));
+}
+
+body {
+  display: flex;
+  place-items: center;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.align-center {
+  align-content: center;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.column {
+  flex-direction: column;
+}
+
+.row {
+  flex-direction: row;
+}
+
+.containNoRepeatCenter {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#spinner {
+  width: 50px;
+  height: 50px;
+  background-image: url(../assets/img/spinner.svg);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin-top: -25px;
+  margin-left: -25px;
+  z-index: 99999;
+}
+
+#inline-spinner {
+  width: 50px;
+  height: 50px;
+  background-image: url(../assets/img/spinner.svg);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 99999;
+}
+
+.bold {
+  font-weight: 700;
 }
