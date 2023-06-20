@@ -47,6 +47,11 @@ mod GameTokenFaucet {
     }
 
     #[view]
+    fn last_claim(user: ContractAddress) -> u64 {
+        _last_claim::read(user)
+    }
+
+    #[view]
     fn time_until_next_claim(user: ContractAddress) -> u64 {
         let block_timestamp = get_block_timestamp();
         let last_caller_claim = _last_claim::read(user);
@@ -75,11 +80,10 @@ mod GameTokenFaucet {
         let token = IERC20Dispatcher { contract_address: token_address };
         let amount = _claim_amount::read();
 
+        assert(time_until_next_claim(caller_address) == 0_u64, 'ALREADY_CLAIMED');
         _last_claim::write(caller_address, get_block_timestamp());
 
-        assert(time_until_next_claim(caller_address) == 0_u64, 'ALREADY_CLAIMED');
         assert(token.transfer(caller_address, amount), 'TRNSFER_FAILED');
-
         TokensClaimed(caller_address, amount);
     }
 
