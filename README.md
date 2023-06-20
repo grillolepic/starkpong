@@ -10,6 +10,10 @@ Save for the Cairo0 one, all contracts were compiled/declared/deployed with: **s
 - ClassHash: 0x111630357350e90324b40d6e67c06d687964a6da214c99a7e412dc138fffad7
 - ContractAddress: 0x076d616a4566c5cd5d46fe83cf7511f62f868d15e55b60d2ea56103239db2337
 
+**PONG Faucet:**
+- ClassHash: 0x433ad7a44921ba5125d1bde299420089ef56a94f8b92824fec59126e122aa72
+- ContractAddress: 0x05796360bf41e416bd35c8c9a9c95bfd20469a7539cc6d8106434e548544ca23
+
 **Signature Verification (Cairo 0)**
 - ClassHash: 0x16bc10d25350cfb98807701abc3fc01108a75e668b45f83eace2ed256415eba
 - ContractAddress: 0x0090eb31ad0d49d1a1dc446379a74a5a5a40908a7be3838fe93ef5d5a801ef6b
