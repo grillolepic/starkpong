@@ -1,7 +1,5 @@
-# StarkPONG
-
-A fully-P2P game of PONG over state-channels, secured by StarkNet.
-
+# StarkPong
+A fully P2P real-time, multiplayer game. Secured by StarkNet.
 
 ## Deployments
 
