@@ -1,8 +1,10 @@
 #[contract]
 mod GameTokenFaucet {
+    use serde::Serde;
     use zeroable::Zeroable;
+    use starknet::replace_class_syscall;
     use stark_pong::game_token::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
+    use starknet::{ContractAddress, ClassHash, get_caller_address, get_block_timestamp, get_contract_address};
 
     struct Storage {
         _owner: ContractAddress,
@@ -51,7 +53,7 @@ mod GameTokenFaucet {
         let time_past = block_timestamp - last_caller_claim;
         let needed_time = _time_between_claims::read();
         if time_past >= needed_time {
-            0
+            0_u64
         } else {
             needed_time - time_past
         }
@@ -75,7 +77,7 @@ mod GameTokenFaucet {
 
         _last_claim::write(caller_address, get_block_timestamp());
 
-        assert(time_until_next_claim(caller_address) == 0, 'ALREADY_CLAIMED');
+        assert(time_until_next_claim(caller_address) == 0_u64, 'ALREADY_CLAIMED');
         assert(token.transfer(caller_address, amount), 'TRNSFER_FAILED');
 
         TokensClaimed(caller_address, amount);
@@ -101,6 +103,12 @@ mod GameTokenFaucet {
     fn set_claim_amount(new_claim_amount: u256) {
         assert_only_owner();
         _claim_amount::write(new_claim_amount);
+    }
+
+    #[external]
+    fn upgrade(new_class_hash: ClassHash) {
+        assert_only_owner();
+        replace_class_syscall(new_class_hash);
     }
 
     //***********************************************************//
@@ -139,6 +147,7 @@ mod GameTokenFaucet {
 
     #[external]
     fn withdraw(token_address: ContractAddress) {
+        assert_only_owner();
         let contract_address = get_contract_address();
         let owner_address = _owner::read();
         let token = IERC20Dispatcher { contract_address: token_address };
