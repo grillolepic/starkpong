@@ -1,0 +1,197 @@
+[
+    {
+        "type": "function",
+        "name": "constructor",
+        "inputs": [
+            {
+                "name": "token_address",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "time_between_claims",
+                "type": "core::integer::u64"
+            },
+            {
+                "name": "claim_amount",
+                "type": "core::integer::u256"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "tokens_left",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "core::integer::u256"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "last_claim",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ],
+        "outputs": [
+            {
+                "type": "core::integer::u64"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "time_until_next_claim",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ],
+        "outputs": [
+            {
+                "type": "core::integer::u64"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "owner",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "claim",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "set_game_token",
+        "inputs": [
+            {
+                "name": "new_game_token",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "set_time_between_claims",
+        "inputs": [
+            {
+                "name": "new_time",
+                "type": "core::integer::u64"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "set_claim_amount",
+        "inputs": [
+            {
+                "name": "new_claim_amount",
+                "type": "core::integer::u256"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "upgrade",
+        "inputs": [
+            {
+                "name": "new_class_hash",
+                "type": "core::starknet::class_hash::ClassHash"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "transfer_ownership",
+        "inputs": [
+            {
+                "name": "new_owner",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "renounce_ownership",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "withdraw",
+        "inputs": [
+            {
+                "name": "token_address",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "withdraw_game_token",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "event",
+        "name": "OwnershipTransferred",
+        "inputs": [
+            {
+                "name": "previous_owner",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "new_owner",
+                "type": "core::starknet::contract_address::ContractAddress"
+            }
+        ]
+    },
+    {
+        "type": "event",
+        "name": "TokensClaimed",
+        "inputs": [
+            {
+                "name": "player",
+                "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+                "name": "amount",
+                "type": "core::integer::u256"
+            }
+        ]
+    }
+]

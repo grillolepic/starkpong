@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
 import { connect, disconnect } from '@argent/get-starknet';
-import { num, Contract, validateAndParseAddress, Provider, constants } from 'starknet';
+import { Contract, validateAndParseAddress, Provider, constants } from 'starknet';
 import { formatEther } from '@/helpers/ethereumHelpers';
+import { useGameTokenStore } from './game_token';
+
 import {
   etherAddress,
   networkNames,
-  serverNetworkTag,
   supportedChainIds,
   defaultChainId,
   isTestnet
@@ -15,6 +15,7 @@ import {
 import ETH_ABI from '@/stores/abi/eth.json' assert { type: 'json' };
 
 let _starknet = null;
+let _gameTokenStore = null;
 let _etherContract = null;
 let _fixed_mainnet_provider = new Provider({ sequencer: { network: constants.NetworkName.SN_MAIN } });
 
@@ -42,7 +43,12 @@ export const useStarknetStore = defineStore('starknet', {
   },
 
   getters: {
-    account: (state) => _starknet.account,
+    account: (state) => {
+      if (_starknet != null) {
+        return _starknet.account
+      }
+      return null
+    },
     shortAddress: (state) => {
       return (len) => {
         if (state.address.length == 0) {
@@ -59,8 +65,8 @@ export const useStarknetStore = defineStore('starknet', {
     currentOrDefaultChainId: (state) => (state.chainId == null) ? defaultChainId : state.chainId,
     isStarknetConnected: () => (_starknet == null) ? false : _starknet.isConnected,
     isStarknetReady: (state) => (state.connected && state.networkOk),
-    isStarknetTestnet: (state) => isTestnet(state.currentOrDefaultChainId),
-    balanceFloat: (state) => parseFloat(formatEther(state.balance))
+    isTestnet: (state) => isTestnet(state.currentOrDefaultChainId),
+    balanceFormat: (state) => formatEther(state.balance)
   },
 
   actions: {
@@ -74,10 +80,13 @@ export const useStarknetStore = defineStore('starknet', {
         }
       }
       this.initialized = true;
-      //_almanacStore = useAlmanacStore();
+      _gameTokenStore = useGameTokenStore();
+      _gameTokenStore.init();
+      //_gameRoomFactoryStore = useGameRoomFactoryStore();
     },
 
     async connectStarknet() {
+      console.log('starknet: connectStarknet()');
       _starknet = await connect({
         modalOptions: { theme: 'dark' }
       });
@@ -113,10 +122,13 @@ export const useStarknetStore = defineStore('starknet', {
         if (network_ok) {
           _etherContract = new Contract(ETH_ABI, etherAddress[chainId], _starknet.account);
           await this.updateBalance();
+
+          _gameTokenStore.loggedIn();
+          //_gameRoomFactoryStore.loggedIn()
         }
 
-        localStorage.setItem('wasConnected', true)
-        //_almanacStore.loggedIn()
+        localStorage.setItem('wasConnected', true);
+
       } else {
         this.logout()
       }
@@ -127,8 +139,8 @@ export const useStarknetStore = defineStore('starknet', {
 
       let stark_domain = null
       try {
-        stark_domain = await _fixed_mainnet_provider.getStarkName(this.address);  
-      } catch (err) {}
+        stark_domain = await _fixed_mainnet_provider.getStarkName(this.address);
+      } catch (err) { }
 
       this.starkName = stark_domain;
     },
@@ -159,11 +171,18 @@ export const useStarknetStore = defineStore('starknet', {
       try {
         if (_starknet != null) {
 
+          console.log("0");
+
           this.transaction.status = 0;
 
-          let result = await _starknet.account.execute(tx_array);
-          this.transaction.link = `https://${this.isStarknetTestnet ? 'testnet.' : ''}starkscan.co/tx/${result.transaction_hash}`;
+          console.log(tx_array);
 
+          let result = await _starknet.account.execute(tx_array);
+
+          console.log("1");
+          this.transaction.link = `https://${this.isTestnet ? 'testnet.' : ''}starkscan.co/tx/${result.transaction_hash}`;
+
+          console.log("2");
           this.transaction.status = 1;
           await _starknet.provider.waitForTransaction(result.transaction_hash);
 
@@ -172,8 +191,10 @@ export const useStarknetStore = defineStore('starknet', {
           return true;
         }
       } catch (err) {
+        console.log(err);
         this.transaction.error = err.toString().replace("Error: ", "");
         this.transaction.status = -1;
+
       }
       return false;
     },
@@ -195,7 +216,9 @@ export const useStarknetStore = defineStore('starknet', {
       disconnect({
         clearLastWallet: true
       });
-      //_almanacStore.loggedOff();
+      _gameTokenStore.loggedOut();
+      //_gameRoomFactoryStore.loggedOff();
+
       localStorage.clear();
     }
   }

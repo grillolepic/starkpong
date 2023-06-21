@@ -3,10 +3,15 @@ const etherAddress = {
     '0x534e5f474f45524c49': '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7'
 };
 
-const pongTokenAddress = {
+const gameTokenAddress = {
     '0x534e5f4d41494e': '',
     '0x534e5f474f45524c49': '0x076d616a4566c5cd5d46fe83cf7511f62f868d15e55b60d2ea56103239db2337'
 };
+
+const gameTokenFaucetAddress = {
+    '0x534e5f4d41494e': '',
+    '0x534e5f474f45524c49': '0x007f53eaefff754aad4b12b1316e33521cf20f79361f3934c87b98b575521d1f'
+}
 
 const networkNames = {
     '0x534e5f4d41494e': 'StarkNet Mainnet',
@@ -32,7 +37,8 @@ function isTestnet(chainId) {
 
 export {
     etherAddress,
-    pongTokenAddress,
+    gameTokenAddress,
+    gameTokenFaucetAddress,
     networkNames,
     serverNetworkTag,
     gameFactoryAddress,

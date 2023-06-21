@@ -10,6 +10,11 @@ const router = createRouter({
       component: HomeView
     },
     {
+      path: '/faucet',
+      name: 'Faucet',
+      component: () => import('../views/Faucet.vue'),
+    },
+    {
       path: '/createRoom',
       name: 'CreateRoom',
       component: () => import('../views/CreateRoom.vue'),

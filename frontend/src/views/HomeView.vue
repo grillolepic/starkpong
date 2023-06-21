@@ -1,4 +1,5 @@
 <script setup>
+import { RouterLink } from 'vue-router';
 import { useStarknetStore } from '../stores/starknet';
 const starknetStore = useStarknetStore();
 </script>
@@ -10,7 +11,7 @@ const starknetStore = useStarknetStore();
             <div class="info">A fully P2P real-time, multiplayer game. Secured by StarkNet.</div>
             <div class="button">CREATE A GAME ROOM</div>
             <div class="button">JOIN A GAME ROOM</div>
-            <div class="button" v-if="starknetStore.isStarknetTestnet"><span class="bold">PONG</span> FAUCET</div>
+            <RouterLink to="/faucet"><div class="button" v-if="starknetStore.isTestnet"><span class="bold">PONG</span> FAUCET</div></RouterLink>
         </div>
     </div>
 </template>
@@ -28,6 +29,7 @@ const starknetStore = useStarknetStore();
 .button {
     width: 450px;
     margin: 10px;
+    color: white !important;
 }
 
 .bold {
