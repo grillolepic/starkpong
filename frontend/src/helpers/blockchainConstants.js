@@ -13,6 +13,11 @@ const gameTokenFaucetAddress = {
     '0x534e5f474f45524c49': '0x007f53eaefff754aad4b12b1316e33521cf20f79361f3934c87b98b575521d1f'
 }
 
+const gameRoomFactoryAddress = {
+    '0x534e5f4d41494e': '',
+    '0x534e5f474f45524c49': '0x02909102709cbd49f3d5cccc85056bc489c81b09baecdc98f44bb4cb0f7b9a74'
+};
+
 const networkNames = {
     '0x534e5f4d41494e': 'StarkNet Mainnet',
     '0x534e5f474f45524c49': 'StarkNet Goerli Testnet'
@@ -21,11 +26,6 @@ const networkNames = {
 const serverNetworkTag = {
     '0x534e5f4d41494e': 'starknet',
     '0x534e5f474f45524c49': 'starknet_goerli'
-};
-
-const gameFactoryAddress = {
-    '0x534e5f4d41494e': '',
-    '0x534e5f474f45524c49': '0x02909102709cbd49f3d5cccc85056bc489c81b09baecdc98f44bb4cb0f7b9a74'
 };
 
 const supportedChainIds = ['0x534e5f474f45524c49'];
@@ -41,7 +41,7 @@ export {
     gameTokenFaucetAddress,
     networkNames,
     serverNetworkTag,
-    gameFactoryAddress,
+    gameRoomFactoryAddress,
     supportedChainIds,
     defaultChainId,
     isTestnet

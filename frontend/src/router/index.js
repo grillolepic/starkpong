@@ -15,9 +15,14 @@ const router = createRouter({
       component: () => import('../views/Faucet.vue'),
     },
     {
-      path: '/createRoom',
+      path: '/create',
       name: 'CreateRoom',
       component: () => import('../views/CreateRoom.vue'),
+    },
+    {
+      path: '/join',
+      name: 'JoinRoom',
+      component: () => import('../views/JoinRoom.vue'),
     },
     {
       path: '/room/:roomId',

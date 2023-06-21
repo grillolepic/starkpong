@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Contract, CallData } from 'starknet';
+import { Contract } from 'starknet';
 import { useStarknetStore } from './starknet';
 import { formatEther, formatEtherForDisplay } from '@/helpers/ethereumHelpers';
 import {
@@ -31,6 +31,7 @@ export const useGameTokenStore = defineStore('game_token', {
     },
 
     getters: {
+        balanceAsFloat: (state) => formatEther(state.balance),
         balanceForDisplay: (state) => formatEtherForDisplay(state.balance)
     },
 
@@ -53,7 +54,7 @@ export const useGameTokenStore = defineStore('game_token', {
         },
 
         async updateBalance() {
-            console.log('starknet: updateBalance()');
+            console.log('game_token: updateBalance()');
             if (!_starknetStore.isStarknetReady) {
                 return this.balance = 0n;
             }
@@ -66,7 +67,7 @@ export const useGameTokenStore = defineStore('game_token', {
         },
 
         async updateFaucetStatus() {
-            console.log('starknet: updateFaucetStatus()');
+            console.log('game_token: updateFaucetStatus()');
             if (!_starknetStore.isStarknetReady || !_starknetStore.isTestnet) {
                 return this.$patch({
                     loadingFaucetStatus: false,
@@ -90,8 +91,6 @@ export const useGameTokenStore = defineStore('game_token', {
 
             let last_claim = await _gameTokenFaucetContract.last_claim(_starknetStore.address);
             last_claim += 86400n;
-
-            console.log(new Date(Number(last_claim * 1000n)));
 
             return this.$patch({
                 loadingFaucetStatus: false,

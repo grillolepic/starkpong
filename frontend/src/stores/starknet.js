@@ -3,7 +3,7 @@ import { connect, disconnect } from '@argent/get-starknet';
 import { Contract, validateAndParseAddress, Provider, constants } from 'starknet';
 import { formatEther } from '@/helpers/ethereumHelpers';
 import { useGameTokenStore } from './game_token';
-
+import { useGameRoomFactoryStore } from './game_room_factory';
 import {
   etherAddress,
   networkNames,
@@ -16,6 +16,7 @@ import ETH_ABI from '@/stores/abi/eth.json' assert { type: 'json' };
 
 let _starknet = null;
 let _gameTokenStore = null;
+let _gameRoomFactoryStore = null;
 let _etherContract = null;
 let _fixed_mainnet_provider = new Provider({ sequencer: { network: constants.NetworkName.SN_MAIN } });
 
@@ -82,7 +83,8 @@ export const useStarknetStore = defineStore('starknet', {
       this.initialized = true;
       _gameTokenStore = useGameTokenStore();
       _gameTokenStore.init();
-      //_gameRoomFactoryStore = useGameRoomFactoryStore();
+      _gameRoomFactoryStore = useGameRoomFactoryStore();
+      _gameRoomFactoryStore.init();
     },
 
     async connectStarknet() {
@@ -124,7 +126,7 @@ export const useStarknetStore = defineStore('starknet', {
           await this.updateBalance();
 
           _gameTokenStore.loggedIn();
-          //_gameRoomFactoryStore.loggedIn()
+          _gameRoomFactoryStore.loggedIn()
         }
 
         localStorage.setItem('wasConnected', true);
@@ -170,31 +172,22 @@ export const useStarknetStore = defineStore('starknet', {
       console.log("starknet: transaction()");
       try {
         if (_starknet != null) {
-
-          console.log("0");
-
           this.transaction.status = 0;
-
-          console.log(tx_array);
-
           let result = await _starknet.account.execute(tx_array);
 
-          console.log("1");
           this.transaction.link = `https://${this.isTestnet ? 'testnet.' : ''}starkscan.co/tx/${result.transaction_hash}`;
-
-          console.log("2");
           this.transaction.status = 1;
           await _starknet.provider.waitForTransaction(result.transaction_hash);
 
           this.transaction.status = 2;
-          await this.updateBalance();
+          this.updateBalance();
           return true;
         }
       } catch (err) {
         console.log(err);
         this.transaction.error = err.toString().replace("Error: ", "");
         this.transaction.status = -1;
-
+        this.updateBalance();
       }
       return false;
     },
@@ -217,7 +210,7 @@ export const useStarknetStore = defineStore('starknet', {
         clearLastWallet: true
       });
       _gameTokenStore.loggedOut();
-      //_gameRoomFactoryStore.loggedOff();
+      _gameRoomFactoryStore.loggedOff();
 
       localStorage.clear();
     }

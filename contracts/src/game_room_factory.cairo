@@ -73,7 +73,7 @@ mod GameRoomFactory {
     }
 
     #[view]
-    fn current_game_room(player: ContractAddress) -> Option<ContractAddress> {
+    fn current_game_room(player: ContractAddress) -> ContractAddress {
         assert(!player.is_zero(), 'PLAYER_IS_ZERO_ADDRESS');
 
         let current_game_room_address = _player_game_room::read(player);
@@ -81,11 +81,11 @@ mod GameRoomFactory {
         if (!(current_game_room_address.is_zero())) {
             let current_game_room = IGameRoomDispatcher { contract_address: current_game_room_address};
             if (current_game_room.is_active()) {
-                return Option::Some((current_game_room_address));
+                return current_game_room_address;
             }
         }
 
-        return Option::None(());
+        0.try_into().unwrap()
     }
 
     #[view]
@@ -122,7 +122,7 @@ mod GameRoomFactory {
     //***********************************************************//
 
     fn assert_player_can_join_room(player_address: ContractAddress) {
-        assert(!current_game_room(player_address).is_none(), 'PLAYER_HAS_ACTIVE_GAME_ROOM');
+        assert(current_game_room(player_address) == 0.try_into().unwrap(), 'PLAYER_HAS_ACTIVE_GAME_ROOM');
     }
 
     fn assert_player_can_wager(player_address: ContractAddress, wager: u256) {

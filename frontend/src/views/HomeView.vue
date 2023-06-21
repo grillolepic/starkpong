@@ -9,8 +9,8 @@ const starknetStore = useStarknetStore();
         <div id="MainMenu" class="flex column flex-center">
             <div class="logo">StarkPong</div>
             <div class="info">A fully P2P real-time, multiplayer game. Secured by StarkNet.</div>
-            <div class="button">CREATE A GAME ROOM</div>
-            <div class="button">JOIN A GAME ROOM</div>
+            <RouterLink to="/create"><div class="button">CREATE A GAME ROOM</div></RouterLink>
+            <RouterLink to="/join"><div class="button">JOIN A GAME ROOM</div></RouterLink>
             <RouterLink to="/faucet"><div class="button" v-if="starknetStore.isTestnet"><span class="bold">PONG</span> FAUCET</div></RouterLink>
         </div>
     </div>
