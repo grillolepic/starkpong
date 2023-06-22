@@ -4,6 +4,9 @@ use starknet::ContractAddress;
 trait IGameRoomFactory {
     #[view]
     fn game_token() -> ContractAddress;
+
+    #[extenal]
+    fn update_players_from_game_room(game_room_address: ContractAddress);
 }
 
 #[contract]
@@ -12,6 +15,7 @@ mod GameRoomFactory {
     use stark_pong::game_token::{IERC20Dispatcher, IERC20DispatcherTrait};
     use stark_pong::game_room::{IGameRoomDispatcher, IGameRoomDispatcherTrait};
     use starknet::{ContractAddress, ClassHash, get_caller_address, get_contract_address};
+    use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
     use starknet::syscalls::deploy_syscall;
     use starknet::syscalls::SyscallResult;
     use starknet::replace_class_syscall;
@@ -61,6 +65,18 @@ mod GameRoomFactory {
         fn game_token() -> ContractAddress {
             _game_token::read()
         }
+
+        #[extenal]
+        fn update_players_from_game_room(game_room_address: ContractAddress) {
+            let current_game_room = IGameRoomDispatcher { contract_address: game_room_address };
+            if (current_game_room.is_active()) {
+                let player_0: Player = current_game_room.player(0);
+                let player_1: Player = current_game_room.player(1);
+
+                _player_game_room::write(player_0.address, game_room_address);
+                _player_game_room::write(player_1.address, game_room_address);
+            }
+        }
     }
 
     //***********************************************************//
@@ -94,6 +110,12 @@ mod GameRoomFactory {
     }
 
     #[view]
+    fn last_game_room(player: ContractAddress) -> ContractAddress {
+        assert(!player.is_zero(), 'PLAYER_IS_ZERO_ADDRESS');
+        _player_game_room::read(player)
+    }
+
+    #[view]
     fn game_room_count() -> u256 {
         _game_room_count::read()
     }
@@ -120,6 +142,11 @@ mod GameRoomFactory {
         _player_game_room::write(player_address, new_game_room_address);
         
         GameRoomCreated(player_address, new_game_room_address, wager, _fee::read());
+    }
+    
+    #[external]
+    fn update_players_from_game_room(game_room_address: ContractAddress) {
+        IGameRoomFactory::update_players_from_game_room(game_room_address);
     }
 
     //***********************************************************//

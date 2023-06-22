@@ -1,7 +1,7 @@
 [
     {
-        "name": "constructor",
         "type": "function",
+        "name": "constructor",
         "inputs": [
             {
                 "name": "factory_address",
@@ -28,8 +28,8 @@
         "state_mutability": "external"
     },
     {
-        "name": "is_active",
         "type": "function",
+        "name": "is_active",
         "inputs": [],
         "outputs": [
             {
@@ -39,8 +39,8 @@
         "state_mutability": "view"
     },
     {
-        "name": "stark_pong::utils::game_room_status::GameRoomStatus",
         "type": "enum",
+        "name": "stark_pong::utils::game_room_status::GameRoomStatus",
         "variants": [
             {
                 "name": "WaitingForPlayers",
@@ -65,8 +65,8 @@
         ]
     },
     {
-        "name": "status",
         "type": "function",
+        "name": "status",
         "inputs": [],
         "outputs": [
             {
@@ -76,8 +76,8 @@
         "state_mutability": "view"
     },
     {
-        "name": "stark_pong::game::game_components::state::GameState",
         "type": "struct",
+        "name": "stark_pong::game::game_components::state::GameState",
         "members": [
             {
                 "name": "turn",
@@ -106,8 +106,8 @@
         ]
     },
     {
-        "name": "game_state",
         "type": "function",
+        "name": "game_state",
         "inputs": [],
         "outputs": [
             {
@@ -117,8 +117,8 @@
         "state_mutability": "view"
     },
     {
-        "name": "stark_pong::utils::player::Player",
         "type": "struct",
+        "name": "stark_pong::utils::player::Player",
         "members": [
             {
                 "name": "address",
@@ -131,8 +131,8 @@
         ]
     },
     {
-        "name": "players",
         "type": "function",
+        "name": "players",
         "inputs": [],
         "outputs": [
             {
@@ -142,8 +142,24 @@
         "state_mutability": "view"
     },
     {
-        "name": "wager",
         "type": "function",
+        "name": "player",
+        "inputs": [
+            {
+                "name": "number",
+                "type": "core::integer::u8"
+            }
+        ],
+        "outputs": [
+            {
+                "type": "stark_pong::utils::player::Player"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "wager",
         "inputs": [],
         "outputs": [
             {
@@ -153,8 +169,19 @@
         "state_mutability": "view"
     },
     {
-        "name": "random_seed",
         "type": "function",
+        "name": "fee",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "core::integer::u128"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "random_seed",
         "inputs": [],
         "outputs": [
             {
@@ -164,8 +191,8 @@
         "state_mutability": "view"
     },
     {
-        "name": "join_game_room",
         "type": "function",
+        "name": "join_game_room",
         "inputs": [
             {
                 "name": "offchain_public_key",
@@ -176,15 +203,15 @@
         "state_mutability": "external"
     },
     {
-        "name": "close_game_room",
         "type": "function",
+        "name": "close_game_room",
         "inputs": [],
         "outputs": [],
         "state_mutability": "external"
     },
     {
-        "name": "stark_pong::game::game_components::state::Checkpoint",
         "type": "struct",
+        "name": "stark_pong::game::game_components::state::Checkpoint",
         "members": [
             {
                 "name": "state",
@@ -201,8 +228,8 @@
         ]
     },
     {
-        "name": "set_checkpoint",
         "type": "function",
+        "name": "set_checkpoint",
         "inputs": [
             {
                 "name": "checkpoint",
@@ -213,8 +240,8 @@
         "state_mutability": "external"
     },
     {
-        "name": "stark_pong::game::game_components::actions::TurnAction",
         "type": "struct",
+        "name": "stark_pong::game::game_components::actions::TurnAction",
         "members": [
             {
                 "name": "turn",
@@ -231,8 +258,8 @@
         ]
     },
     {
-        "name": "advance_game_state",
         "type": "function",
+        "name": "advance_game_state",
         "inputs": [
             {
                 "name": "turns",
@@ -243,8 +270,8 @@
         "state_mutability": "external"
     },
     {
-        "name": "exit_with_partial_result",
         "type": "function",
+        "name": "exit_with_partial_result",
         "inputs": [
             {
                 "name": "checkpoint",
@@ -263,8 +290,8 @@
         "state_mutability": "external"
     },
     {
-        "name": "dispute_partial_result",
         "type": "function",
+        "name": "dispute_partial_result",
         "inputs": [
             {
                 "name": "evidence",
@@ -275,27 +302,27 @@
         "state_mutability": "external"
     },
     {
+        "type": "function",
         "name": "confirm_partial_result",
-        "type": "function",
         "inputs": [],
         "outputs": [],
         "state_mutability": "external"
     },
     {
+        "type": "function",
         "name": "finish_exit_with_partial_result",
-        "type": "function",
         "inputs": [],
         "outputs": [],
         "state_mutability": "external"
     },
     {
-        "name": "GameStarted",
         "type": "event",
+        "name": "GameStarted",
         "inputs": []
     },
     {
-        "name": "GameStateUpdated",
         "type": "event",
+        "name": "GameStateUpdated",
         "inputs": [
             {
                 "name": "state",
@@ -304,13 +331,13 @@
         ]
     },
     {
-        "name": "GameFinished",
         "type": "event",
+        "name": "GameFinished",
         "inputs": []
     },
     {
-        "name": "PartialExit",
         "type": "event",
+        "name": "PartialExit",
         "inputs": [
             {
                 "name": "last_turn",
@@ -319,18 +346,18 @@
         ]
     },
     {
+        "type": "event",
         "name": "PartialResultDisputed",
-        "type": "event",
         "inputs": []
     },
     {
+        "type": "event",
         "name": "PartialGameFinished",
-        "type": "event",
         "inputs": []
     },
     {
-        "name": "GameRoomClosed",
         "type": "event",
+        "name": "GameRoomClosed",
         "inputs": []
     }
 ]

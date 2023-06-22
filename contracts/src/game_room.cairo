@@ -1,4 +1,5 @@
 use stark_pong::game::game_components::actions::TurnActionTrait;
+use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
 use core::zeroable::Zeroable;
 use starknet::ContractAddress;
 
@@ -6,6 +7,9 @@ use starknet::ContractAddress;
 trait IGameRoom {
     #[view]
     fn is_active() -> bool;
+
+    #[view]
+    fn player(number: u8) -> Player;
 }
 
 #[contract]
@@ -57,6 +61,11 @@ mod GameRoom {
                 GameRoomStatus::Closed(()) => false
             }
         }
+
+        #[view]
+        fn player(number: u8) -> Player {
+            _players::read(0_u8)
+        }
     }
 
     #[constructor]
@@ -85,16 +94,8 @@ mod GameRoom {
             Player { address: player_address, offchain_public_key: offchain_public_key }
         );
 
-        _players::write(
-            if (player_number == 0_u8) { 1_u8 } else { 0_u8 },
-            Player {
-                address: 0.try_into().unwrap(),
-                offchain_public_key: 0.try_into().unwrap()
-            }
-        );
-
         _state::write(initial_game_state());
-        _optimal_predictable_result::write(false);        
+        _optimal_predictable_result::write(false);
     }
 
     //***********************************************************//
@@ -130,7 +131,7 @@ mod GameRoom {
     fn is_active() -> bool {
         IGameRoom::is_active()
     }
-    
+
     #[view]
     fn status() -> (GameRoomStatus, u64) {
         (_status::read(), _deadline::read())
@@ -144,6 +145,11 @@ mod GameRoom {
     #[view]
     fn players() -> (Player, Player) {
         (_players::read(0_u8), _players::read(1_u8))
+    }
+
+    #[view]
+    fn player(number: u8) -> Player {
+        IGameRoom::player(number)
     }
 
     #[view]
@@ -181,13 +187,28 @@ mod GameRoom {
         );
 
         _start_game();
+
+        let factory = IGameRoomFactoryDispatcher { contract_address: _factory_address::read() };
+        factory.update_players_from_game_room(get_contract_address());
     }
 
     #[external]
     fn close_game_room() {
-        assert_deadline();
-        assert_status(GameRoomStatus::WaitingForPlayers(()));
-        assert_player(Option::Some(0_u8));
+        let status = _status::read();
+
+        if (status == GameRoomStatus::InProgress(())) {
+            assert_deadline();
+        } else {
+            assert_status(GameRoomStatus::WaitingForPlayers(()));
+        }
+
+        let player_0 = _players::read(0_u8);
+        if (player_0.address.is_non_zero()) {
+            assert(player_0.address == get_caller_address(), 'WRONG_PLAYER');
+        } else {
+            let player_1 = _players::read(1_u8);
+            assert(player_1.address == get_caller_address(), 'WRONG_PLAYER');
+        }
 
         _refund_wagers();
         _status::write(GameRoomStatus::Closed(()));

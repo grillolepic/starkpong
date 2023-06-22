@@ -15,7 +15,7 @@ const gameTokenFaucetAddress = {
 
 const gameRoomFactoryAddress = {
     '0x534e5f4d41494e': '',
-    '0x534e5f474f45524c49': '0x047f99a9f800fc06366f32ad78d67b6c115182036292c049574d4d9ede3278d3'
+    '0x534e5f474f45524c49': '0x0485cbfeeb67e014e64e50897ecf93de9cc1b5cf6c2cd1adb530826b6f91f643'
 };
 
 const networkNames = {

@@ -13,10 +13,11 @@ function goToTransactionLink() {
 <template>
     <div id="TransactionStatus" class="flex row flex-center" v-if="starknetStore.transaction.status != null">
         <div v-if="starknetStore.transaction.status == 0" class="flex column section">
-            <div class="inline-spinner"></div>
+            <div class="inline-spinner margin-top"></div>
         </div>
-        <div v-if="starknetStore.transaction.status == 1" class="flex column">
-            <div class="info big">Waiting for transaction...</div>
+        <div v-if="starknetStore.transaction.status == 1" class="flex column flex-center">
+            <div class="info big">Waiting for transaction</div>
+            <div class="inline-spinner"></div>
             <div class="info goBack" @click="goToTransactionLink()">View on StarkScan</div>
         </div>
         <div v-if="starknetStore.transaction.status == 2" class="flex column">
@@ -41,7 +42,7 @@ function goToTransactionLink() {
     align-items: flex-start;
 }
 
-.inline-spinner {
+.margin-top {
     margin-top: 25px;
 }
 

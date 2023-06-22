@@ -1,7 +1,7 @@
 [
   {
-    "name": "constructor",
     "type": "function",
+    "name": "constructor",
     "inputs": [
       {
         "name": "name",
@@ -28,8 +28,8 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "name",
-    "type": "function",
     "inputs": [],
     "outputs": [
       {
@@ -39,8 +39,8 @@
     "state_mutability": "view"
   },
   {
+    "type": "function",
     "name": "symbol",
-    "type": "function",
     "inputs": [],
     "outputs": [
       {
@@ -50,8 +50,8 @@
     "state_mutability": "view"
   },
   {
-    "name": "decimals",
     "type": "function",
+    "name": "decimals",
     "inputs": [],
     "outputs": [
       {
@@ -61,8 +61,8 @@
     "state_mutability": "view"
   },
   {
+    "type": "function",
     "name": "total_supply",
-    "type": "function",
     "inputs": [],
     "outputs": [
       {
@@ -72,8 +72,8 @@
     "state_mutability": "view"
   },
   {
+    "type": "function",
     "name": "totalSupply",
-    "type": "function",
     "inputs": [],
     "outputs": [
       {
@@ -83,8 +83,8 @@
     "state_mutability": "view"
   },
   {
+    "type": "function",
     "name": "balance_of",
-    "type": "function",
     "inputs": [
       {
         "name": "account",
@@ -99,8 +99,8 @@
     "state_mutability": "view"
   },
   {
+    "type": "function",
     "name": "balanceOf",
-    "type": "function",
     "inputs": [
       {
         "name": "account",
@@ -115,8 +115,8 @@
     "state_mutability": "view"
   },
   {
-    "name": "allowance",
     "type": "function",
+    "name": "allowance",
     "inputs": [
       {
         "name": "owner",
@@ -135,8 +135,8 @@
     "state_mutability": "view"
   },
   {
+    "type": "function",
     "name": "transfer",
-    "type": "function",
     "inputs": [
       {
         "name": "recipient",
@@ -155,8 +155,8 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "transfer_from",
-    "type": "function",
     "inputs": [
       {
         "name": "sender",
@@ -179,8 +179,8 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "transferFrom",
-    "type": "function",
     "inputs": [
       {
         "name": "sender",
@@ -203,8 +203,8 @@
     "state_mutability": "external"
   },
   {
-    "name": "approve",
     "type": "function",
+    "name": "approve",
     "inputs": [
       {
         "name": "spender",
@@ -223,8 +223,8 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "increase_allowance",
-    "type": "function",
     "inputs": [
       {
         "name": "spender",
@@ -243,8 +243,8 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "increaseAllowance",
-    "type": "function",
     "inputs": [
       {
         "name": "spender",
@@ -263,8 +263,8 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "decrease_allowance",
-    "type": "function",
     "inputs": [
       {
         "name": "spender",
@@ -283,8 +283,8 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "decreaseAllowance",
-    "type": "function",
     "inputs": [
       {
         "name": "spender",
@@ -303,8 +303,8 @@
     "state_mutability": "external"
   },
   {
-    "name": "Transfer",
     "type": "event",
+    "name": "Transfer",
     "inputs": [
       {
         "name": "from",
@@ -321,8 +321,8 @@
     ]
   },
   {
-    "name": "Approval",
     "type": "event",
+    "name": "Approval",
     "inputs": [
       {
         "name": "owner",

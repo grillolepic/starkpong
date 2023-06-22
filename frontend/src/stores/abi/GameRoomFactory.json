@@ -1,7 +1,7 @@
 [
   {
-    "name": "constructor",
     "type": "function",
+    "name": "constructor",
     "inputs": [
       {
         "name": "token",
@@ -20,8 +20,8 @@
     "state_mutability": "external"
   },
   {
-    "name": "owner",
     "type": "function",
+    "name": "game_token",
     "inputs": [],
     "outputs": [
       {
@@ -31,8 +31,19 @@
     "state_mutability": "view"
   },
   {
-    "name": "current_game_room",
     "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "type": "core::starknet::contract_address::ContractAddress"
+      }
+    ],
+    "state_mutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "current_game_room",
     "inputs": [
       {
         "name": "player",
@@ -47,8 +58,24 @@
     "state_mutability": "view"
   },
   {
-    "name": "game_room_count",
     "type": "function",
+    "name": "last_game_room",
+    "inputs": [
+      {
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "core::starknet::contract_address::ContractAddress"
+      }
+    ],
+    "state_mutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "game_room_count",
     "inputs": [],
     "outputs": [
       {
@@ -58,8 +85,8 @@
     "state_mutability": "view"
   },
   {
-    "name": "fee",
     "type": "function",
+    "name": "fee",
     "inputs": [],
     "outputs": [
       {
@@ -69,8 +96,8 @@
     "state_mutability": "view"
   },
   {
-    "name": "create_room",
     "type": "function",
+    "name": "create_room",
     "inputs": [
       {
         "name": "offchain_public_key",
@@ -85,8 +112,20 @@
     "state_mutability": "external"
   },
   {
-    "name": "update_game_room_classhash",
     "type": "function",
+    "name": "update_players_from_game_room",
+    "inputs": [
+      {
+        "name": "game_room_address",
+        "type": "core::starknet::contract_address::ContractAddress"
+      }
+    ],
+    "outputs": [],
+    "state_mutability": "external"
+  },
+  {
+    "type": "function",
+    "name": "update_game_room_classhash",
     "inputs": [
       {
         "name": "new_game_room_classhash",
@@ -97,8 +136,8 @@
     "state_mutability": "external"
   },
   {
-    "name": "transfer_ownership",
     "type": "function",
+    "name": "transfer_ownership",
     "inputs": [
       {
         "name": "new_owner",
@@ -109,15 +148,15 @@
     "state_mutability": "external"
   },
   {
-    "name": "renounce_ownership",
     "type": "function",
+    "name": "renounce_ownership",
     "inputs": [],
     "outputs": [],
     "state_mutability": "external"
   },
   {
-    "name": "set_fee",
     "type": "function",
+    "name": "set_fee",
     "inputs": [
       {
         "name": "fee",
@@ -128,8 +167,8 @@
     "state_mutability": "external"
   },
   {
-    "name": "withdraw",
     "type": "function",
+    "name": "withdraw",
     "inputs": [
       {
         "name": "token_address",
@@ -140,22 +179,22 @@
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "withdraw_game_token",
-    "type": "function",
     "inputs": [],
     "outputs": [],
     "state_mutability": "external"
   },
   {
+    "type": "function",
     "name": "withdraw_eth",
-    "type": "function",
     "inputs": [],
     "outputs": [],
     "state_mutability": "external"
   },
   {
-    "name": "upgrade",
     "type": "function",
+    "name": "upgrade",
     "inputs": [
       {
         "name": "new_class_hash",
@@ -166,8 +205,8 @@
     "state_mutability": "external"
   },
   {
-    "name": "OwnershipTransferred",
     "type": "event",
+    "name": "OwnershipTransferred",
     "inputs": [
       {
         "name": "previous_owner",
@@ -180,8 +219,8 @@
     ]
   },
   {
-    "name": "GameRoomCreated",
     "type": "event",
+    "name": "GameRoomCreated",
     "inputs": [
       {
         "name": "game_room",

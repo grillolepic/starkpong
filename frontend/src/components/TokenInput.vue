@@ -1,5 +1,5 @@
 <script setup>
-import { defineExpose, ref } from 'vue';
+import { ref } from 'vue';
 import { useGameTokenStore } from '../stores/game_token';
 
 const gameTokenStore = useGameTokenStore();

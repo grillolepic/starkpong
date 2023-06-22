@@ -19,10 +19,10 @@ Save for the Cairo0 one, all contracts were compiled/declared/deployed with: **s
 - ContractAddress: 0x0090eb31ad0d49d1a1dc446379a74a5a5a40908a7be3838fe93ef5d5a801ef6b
 
 **Game Room:**
-- ClassHash: 0x7201c780ba175afe737a4340e17c26713a5c86953b4e4f0cefed1de5dc01937
+- ClassHash: 0x435951f76498fe04dfae750bfccd9cf397a045ab8bfb5ed94f0812aacd85c2e
 
 **Game Room Factory:**
-- ClassHash: 0x5903a51f204a4d87c428aba9db2e5a6c01565d55bd6a09f6ee79572c89277ef
+- ClassHash: 0x53a0aa69b90c94befc172b9f96d2320e46876b6928e9af76c890c3a53ab1462
 - ContractAddress: 0x0485cbfeeb67e014e64e50897ecf93de9cc1b5cf6c2cd1adb530826b6f91f643
 
 ## Development notes

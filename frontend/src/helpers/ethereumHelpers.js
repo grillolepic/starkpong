@@ -4,7 +4,6 @@ function parseEther(amount) {
   let amounts = amount.split('.');
   let part1 = BigInt(amounts[0]) * BigInt(10 ** 18);
   let part2 = (amounts.length > 1) ? BigInt(amounts[1]) * BigInt(10 ** (18 - amounts[1].length)) : 0n;
-  console.log(part1, part2);
   return part1 + part2;
 }
 

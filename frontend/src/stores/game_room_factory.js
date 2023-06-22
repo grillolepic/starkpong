@@ -19,13 +19,15 @@ let _gameRoomFactoryContract = null;
 
 let _initialState = {
     loadingGameRoom: true,
-    
+
     gameRoomToJoin: {
         address: null,
         opponent: null,
         lastInput: 0,
-        checking: false,
+        checking: true,
         wager: null,
+        opponent: null,
+        status: null,
         error: null
     }
 }
@@ -57,21 +59,23 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
 
         async updateGameRoom() {
             console.log('game_room_factory: updateGameRoom()');
-            
+
             if (!_starknetStore.isStarknetReady) {
                 this.loadingGameRoom = true;
                 return _gameRoomStore.reset();
             }
 
+            if (_gameRoomFactoryContract == null) return;
+
             this.loadingGameRoom = true;
             let current_game_room = await _gameRoomFactoryContract.current_game_room(_starknetStore.address);
-            
+
             if (current_game_room == 0n) {
                 this.loadingGameRoom = false;
                 return _gameRoomStore.reset();
             } else {
                 current_game_room = '0x' + current_game_room.toString(16);
-                
+
                 let currentPath = this.$router.currentRoute.fullPath;
                 if (currentPath != `/rooom/${current_game_room}`) {
                     this.$router.push({ name: 'GameRoom', params: { id: current_game_room } });
@@ -128,15 +132,65 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
             }
         },
 
+        async joinRoom() {
+            console.log(`game_room_factory: joinRoom()`);
+
+            if (!_starknetStore.isStarknetReady) return;
+
+            //Verify that the user has the required balance
+            if (this.gameRoomToJoin.wager > _gameTokenStore.balance) {
+                console.error(`Insufficient $PONG balance`);
+                return;
+            }
+
+            //Verify that the user has no active game room
+            await this.updateGameRoom();
+            if (_gameRoomStore.currentGameRoom != null) return;
+
+            //Create an offchain KeyPair
+            const privateKey = stark.randomAddress();
+            const starkKey = ec.starkCurve.getStarkKey(privateKey);
+            const publicKey = encode.addHexPrefix(encode.buf2hex(ec.starkCurve.getPublicKey(privateKey, false)));
+
+            localStorage.setItem(this.localKey, JSON.stringify({
+                private_key: privateKey,
+                stark_key: starkKey,
+                public_key: publicKey
+            }));
+
+            try {
+                let calls = [];
+
+                if (this.gameRoomToJoin.wager > 0n) {
+                    calls.push(await _gameTokenStore.tokenContract.populate("approve", [this.gameRoomToJoin.address, this.gameRoomToJoin.wager]));
+                }
+
+                let gameRoomToJoinContract = new Contract(GAME_ROOM_ABI, this.gameRoomToJoin.address, _starknetStore.account);
+
+                calls.push(await gameRoomToJoinContract.populate("join_game_room", [starkKey]));
+                if (await _starknetStore.sendTransactions(calls)) {
+                    _gameTokenStore.updateBalance();
+                    this.updateGameRoom();
+                }
+
+            } catch (err) {
+                console.log(err);
+            }
+        },
+
         updateGameRoomToJoin(gameRoomAddress, instant) {
             console.log(`game_room_factory: updateGameRoomToJoin(${gameRoomAddress}, ${instant})`);
+
+            if (gameRoomAddress == this.gameRoomToJoin.address) return;
 
             this.gameRoomToJoin = {
                 address: gameRoomAddress,
                 lastInput: Date.now(),
-                checking: false,
+                checking: true,
                 wager: null,
-                opponent: null
+                opponent: null,
+                status: null,
+                error: null
             };
 
             clearTimeout(_gameRoomToJoinTimeout);
@@ -151,26 +205,60 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
         async _getGameRoomToJoinInfo() {
             console.log('game_room_factory: _getGameRoomToJoinInfo()');
 
-            let gameRoomToJoinContract = new Contract(GAME_ROOM_ABI, this.gameRoomToJoin.address, _starknetStore.account);
+            try {
+                let gameRoomToJoinContract = new Contract(GAME_ROOM_ABI, this.gameRoomToJoin.address, _starknetStore.account);
 
-            let result_0 = await gameRoomToJoinContract.is_active();
-            console.log("is_active: ", result_0);
+                this.gameRoomToJoin.checking = true;
 
-            let result_1 = await gameRoomToJoinContract.status();
-            console.log("status: ", result_1);
+                let status_response = await gameRoomToJoinContract.status();
+                this.gameRoomToJoin.status = status_response["0"];
+                let deadline = status_response["1"];
 
-            let result_2 = await gameRoomToJoinContract.game_state();
-            console.log("game_state: ", result_2);
+                if (this.gameRoomToJoin.status == 0n) {
 
-            let result_3 = await gameRoomToJoinContract.players();
-            console.log("players: ", result_3);
+                    if (deadline <= Math.floor(Date.now()/1000)) {
+                        this.gameRoomToJoin.checking = false;
+                        this.gameRoomToJoin.error = 'Game room is unavailable';
+                        return;
+                    }
+                    
+                    let wager_response = await gameRoomToJoinContract.wager();
+                    this.gameRoomToJoin.wager = wager_response;
 
-            let result_4 = await gameRoomToJoinContract.wager();
-            console.log("wager: ", result_4);
+                    let player_0_response = await gameRoomToJoinContract.player(0);
+                    if (player_0_response.address != 0n) {
+                        this.gameRoomToJoin.opponent = '0x' + player_0_response.address.toString(16);
+                    } else {
+                        let player_1_response = await gameRoomToJoinContract.player(1);
+                        this.gameRoomToJoin.opponent = '0x' + player_1_response.address.toString(16);
+                    }
 
-            let result_5 = await gameRoomToJoinContract.random_seed();
-            console.log("random_seed: ", result_5);
-            
+                    this.gameRoomToJoin.checking = false;
+                } else {
+                    this.gameRoomToJoin.checking = false;
+                    this.gameRoomToJoin.error = 'Game room is unavailable';
+                }
+            } catch (err) {
+                console.log(err);
+                this.gameRoomToJoin.checking = false;
+                this.gameRoomToJoin.error = 'Unknown error';
+            }
+        },
+
+        resetGameRoomToJoin() {
+            console.log(`game_room_factory: resetGameRoomToJoin()`);
+
+            this.gameRoomToJoin = {
+                address: '',
+                lastInput: Date.now(),
+                checking: false,
+                wager: null,
+                opponent: null,
+                status: null,
+                error: null
+            };
+
+            clearTimeout(_gameRoomToJoinTimeout);
         },
 
         loggedOut() {

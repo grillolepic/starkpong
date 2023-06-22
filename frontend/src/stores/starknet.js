@@ -69,7 +69,8 @@ export const useStarknetStore = defineStore('starknet', {
     isStarknetConnected: () => (_starknet == null) ? false : _starknet.isConnected,
     isStarknetReady: (state) => (state.connected && state.networkOk),
     isTestnet: (state) => isTestnet(state.currentOrDefaultChainId),
-    balanceFormat: (state) => formatEther(state.balance)
+    balanceFormat: (state) => formatEther(state.balance),
+    fixedMainnetProvider: () => _fixed_mainnet_provider
   },
 
   actions: {
