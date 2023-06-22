@@ -25,17 +25,18 @@ onMounted(() => {
                     <div class="inline-spinner"></div>
                 </div>
                 <div v-else-if="gameTokenStore.faucetReady" class="flex column flex-center">
-                    <div class="button" @click="gameTokenStore.claim()" v-if="starknetStore.transaction.status == null">GET
+                    <div class="button big-button" @click="gameTokenStore.claim()"
+                        v-if="starknetStore.transaction.status == null">GET
                         500 PONG TOKENS</div>
                     <RouterLink to="/" v-if="starknetStore.transaction.status == null">
-                        <div class="info backToHome">Back to Home</div>
+                        <div class="button big-button">BACK TO HOME</div>
                     </RouterLink>
                 </div>
                 <div v-else class="flex column flex-center">
                     <div class="info red-text">You have already claimed <spanc class="bold">PONG</spanc>tokens on the last
                         24hs. You will be able to claim more tokens on {{ gameTokenStore.nextClaim }} </div>
                     <RouterLink to="/" v-if="starknetStore.transaction.status == null">
-                        <div class="info backToHome">Back to Home</div>
+                        <div class="button big-button">BACK TO HOME</div>
                     </RouterLink>
                 </div>
             </div>
@@ -51,18 +52,8 @@ onMounted(() => {
 }
 
 .info {
-    margin-top: 15px;
+    margin: 15px 0px;
     text-align: center;
-}
-
-.backToHome {
-    color: white !important;
-    text-decoration: underline;
-}
-
-.button {
-    margin-top: 25px;
-    width: 450px;
 }
 
 .bold {
@@ -71,10 +62,11 @@ onMounted(() => {
 
 #faucetContents {
     justify-content: flex-start;
-    height: 200px;
+    height: 250px;
     width: 450px;
 }
 
 .inline-spinner {
     margin-top: 25px;
-}</style>
+}
+</style>

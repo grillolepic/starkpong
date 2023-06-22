@@ -1,17 +1,18 @@
-import { createApp } from 'vue';
+import { createApp, markRaw } from 'vue';
 import { createPinia } from 'pinia';
 import { useStarknetStore } from '@/stores/starknet';
-import Vue3TouchEvents from "vue3-touch-events";
 
 import App from './App.vue';
 import router from './router';
 import './assets/main.css';
 
 const app = createApp(App);
+const pinia = createPinia();
 
-app.use(createPinia());
+pinia.use(({ store }) => { store.$router = markRaw(router) });
+
+app.use(pinia);
 app.use(router);
-app.use(Vue3TouchEvents);
 app.mount('#app');
 
 useStarknetStore().init();

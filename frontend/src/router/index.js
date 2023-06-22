@@ -25,7 +25,7 @@ const router = createRouter({
       component: () => import('../views/JoinRoom.vue'),
     },
     {
-      path: '/room/:roomId',
+      path: '/room/:id',
       name: 'GameRoom',
       component: () => import('../views/GameRoom.vue'),
       props: true

@@ -31,6 +31,7 @@ export const useGameTokenStore = defineStore('game_token', {
     },
 
     getters: {
+        tokenContract: (_) => _gameTokenContract,
         balanceAsFloat: (state) => formatEther(state.balance),
         balanceForDisplay: (state) => formatEtherForDisplay(state.balance)
     },

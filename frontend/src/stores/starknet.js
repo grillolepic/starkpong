@@ -3,6 +3,7 @@ import { connect, disconnect } from '@argent/get-starknet';
 import { Contract, validateAndParseAddress, Provider, constants } from 'starknet';
 import { formatEther } from '@/helpers/ethereumHelpers';
 import { useGameTokenStore } from './game_token';
+import { useGameRoomStore } from './game_room';
 import { useGameRoomFactoryStore } from './game_room_factory';
 import {
   etherAddress,
@@ -16,6 +17,7 @@ import ETH_ABI from '@/stores/abi/eth.json' assert { type: 'json' };
 
 let _starknet = null;
 let _gameTokenStore = null;
+let _gameRoomStore = null;
 let _gameRoomFactoryStore = null;
 let _etherContract = null;
 let _fixed_mainnet_provider = new Provider({ sequencer: { network: constants.NetworkName.SN_MAIN } });
@@ -85,6 +87,8 @@ export const useStarknetStore = defineStore('starknet', {
       _gameTokenStore.init();
       _gameRoomFactoryStore = useGameRoomFactoryStore();
       _gameRoomFactoryStore.init();
+      _gameRoomStore = useGameRoomStore();
+      _gameRoomStore.init();
     },
 
     async connectStarknet() {
@@ -211,8 +215,6 @@ export const useStarknetStore = defineStore('starknet', {
       });
       _gameTokenStore.loggedOut();
       _gameRoomFactoryStore.loggedOff();
-
-      localStorage.clear();
     }
   }
 })

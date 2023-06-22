@@ -48,6 +48,7 @@ const menu = ref(false);
     color: var(--white);
     font-size: 33px;
     transition: ease 0.1s;
+    margin-left: 10px;
 }
 
 #Logo:hover {
@@ -59,7 +60,7 @@ const menu = ref(false);
     height: 40px;
     border-radius: 0.375rem;
     background-color: var(--grey-base);
-    margin-right: 25px;
+    margin: 10px;
 }
 
 .tokenImage {

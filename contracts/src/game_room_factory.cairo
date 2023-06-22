@@ -68,6 +68,11 @@ mod GameRoomFactory {
     //***********************************************************//
 
     #[view]
+    fn game_token() -> ContractAddress {
+        IGameRoomFactory::game_token()
+    }
+
+    #[view]
     fn owner() -> ContractAddress {
         _owner::read()
     }

@@ -28,6 +28,17 @@
         "state_mutability": "external"
     },
     {
+        "name": "is_active",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "core::bool"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
         "name": "stark_pong::utils::game_room_status::GameRoomStatus",
         "type": "enum",
         "variants": [

@@ -3,44 +3,38 @@ import { defineExpose, ref } from 'vue';
 import { useGameTokenStore } from '../stores/game_token';
 
 const gameTokenStore = useGameTokenStore();
-
-const wager = ref(0);
+const tokenAmount = ref('0');
 
 function useMax() {
-    wager.value = parseFloat(gameTokenStore.balanceAsFloat).toString()
+    tokenAmount.value = parseFloat(gameTokenStore.balanceAsFloat).toString()
 }
 
 function onChange() {
-    if (wager.value == "") {
-        wager.value = 0;
+    if (tokenAmount.value == "") {
+        tokenAmount.value = 0;
     }
-
-    wager.value = parseFloat(wager.value).toString();
+    tokenAmount.value = parseFloat(tokenAmount.value).toString();
 }
 
 function onInput() {
-    console.log("onInput()");
-    console.log(wager.value);
-    console.log(typeof wager.value);
-
-    if (typeof wager.value == "string") {
+    if (typeof tokenAmount.value == "string") {
         var rgx = /^[0-9]*\.?[0-9]*$/;
-        let new_value = wager.value.match(rgx);
-        wager.value = new_value;
+        let new_value = tokenAmount.value.match(rgx);
+        tokenAmount.value = new_value;
     }
 }
 
-defineExpose({ wager });
+defineExpose({ tokenAmount });
 </script>
 
 <template>
     <div id="TokenInputContainer" class="flex row flex-center">
         <div class="label bold">Bet:</div>
         <div id="tokenInput" class="flex row flex-center">
-            <input v-model="wager" @change="onChange" @input="onInput">
+            <input v-model="tokenAmount" @change="onChange" @input="onInput">
             <div class="max" @click="useMax()">USE MAX</div>
         </div>
-        <div class="tokenName bold">{{gameTokenStore.tokenName}}</div>
+        <div class="tokenName bold">{{ gameTokenStore.tokenName }}</div>
     </div>
 </template>
 

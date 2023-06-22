@@ -1,23 +1,29 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
 import { useStarknetStore } from '../stores/starknet';
 import { useGameTokenStore } from '../stores/game_token';
+import { useGameRoomFactoryStore } from '../stores/game_room_factory';
 import TransactionStatus from '../components/TransactionStatus.vue';
 import TokenInput from '../components/TokenInput.vue';
 
 const starknetStore = useStarknetStore();
 const gameTokenStore = useGameTokenStore();
-const router = useRouter();
+const gameRoomFactoryStore = useGameRoomFactoryStore();
 
 let game_room_contract = ref("");
 
-onMounted(async () => {
-    //router.push('/');
+onMounted(() => {
+    gameRoomFactoryStore.updateGameRoom();
+    const route = useRoute();
+    if("room" in route.query) {
+        game_room_contract.value = route.query.room;
+        gameRoomFactoryStore.updateGameRoomToJoin(game_room_contract.value, true);
+    }
 });
 
 function onInput() {
-
+    gameRoomFactoryStore.updateGameRoomToJoin(game_room_contract.value, false);
 }
 </script>
 
@@ -25,19 +31,24 @@ function onInput() {
     <div class="flex column flex-center max-height-without-navbar">
         <div id="MainMenu" class="flex column flex-center">
             <div class="logo">Join Room</div>
-            <div id="createRoomContents" class="flex column flex-center" v-if="starknetStore.transaction.status == null">
+            <div id="createRoomContents" class="flex column flex-center" v-if="starknetStore.transaction.status == null && !gameRoomFactoryStore.loadingGameRoom">
                 <div id="ContractInputContainer" class="flex row flex-center">
                     <div class="label bold">Address:</div>
                     <div id="contractInput" class="flex row flex-center">
                         <input type="text" v-model="game_room_contract" @input="onInput" />
                     </div>
                 </div>
-                <div class="button" @click="gameTokenStore.claim()" v-if="starknetStore.transaction.status == null">
+                <div id="requiredBet" class="flex row flex-center">
+                    <div class="label bold">Required bet:</div>
+                    <div class="info">0 {{gameTokenStore.tokenName}}</div>
+                </div>
+                <div class="button big-button" @click="gameTokenStore.claim()" v-if="starknetStore.transaction.status == null">
                     JOIN GAME ROOM</div>
                 <RouterLink to="/" v-if="starknetStore.transaction.status == null">
-                    <div class="info backToHome">Back to Home</div>
+                    <div class="button big-button">BACK TO HOME</div>
                 </RouterLink>
             </div>
+            <div v-else-if="gameRoomFactoryStore.loadingGameRoom" class="inline-spinner"></div>
             <TransactionStatus v-else />
         </div>
     </div>
@@ -46,7 +57,7 @@ function onInput() {
 <style scoped>
 #createRoomContents {
     justify-content: flex-start;
-    height: 200px;
+    height: 250px;
     width: 450px;
 }
 
@@ -60,19 +71,9 @@ function onInput() {
     line-height: 65px;
 }
 
-.info {
-    margin-top: 15px;
-    text-align: center;
-}
-
 .backToHome {
     color: white !important;
     text-decoration: underline;
-}
-
-.button {
-    margin-top: 25px;
-    width: 450px;
 }
 
 .inline-spinner {
@@ -80,7 +81,11 @@ function onInput() {
 }
 
 #ContractInputContainer {
-    margin-top: 25px;
+    margin: 15px 0px;
+}
+
+#requiredBet {
+    margin-bottom: 25px;
 }
 
 #contractInput {
@@ -97,12 +102,12 @@ function onInput() {
 }
 
 input {
-    width: 200px;
+    width: 100%;
     background-color: transparent;
     border: none;
     color: var(--white);
     font-size: 18px;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     outline: none;
 }
 </style>

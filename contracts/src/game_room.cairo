@@ -116,6 +116,11 @@ mod GameRoom {
     //***********************************************************//
 
     #[view]
+    fn is_active() -> bool {
+        IGameRoom::is_active()
+    }
+    
+    #[view]
     fn status() -> (GameRoomStatus, u64) {
         (_status::read(), _deadline::read())
     }

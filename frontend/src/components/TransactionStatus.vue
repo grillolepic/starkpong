@@ -34,7 +34,7 @@ function goToTransactionLink() {
 <style scoped>
 #TransactionStatus {
     align-items: flex-start;
-    height: 200px;
+    height: 250px;
 }
 
 .section {
