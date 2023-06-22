@@ -19,14 +19,14 @@ Save for the Cairo0 one, all contracts were compiled/declared/deployed with: **s
 - ContractAddress: 0x0090eb31ad0d49d1a1dc446379a74a5a5a40908a7be3838fe93ef5d5a801ef6b
 
 **Game Room:**
-- ClassHash: 0x750376849e6f3271dab28be028be19a008a0ebda4c94a44c3f9ebea5e59852
+- ClassHash: 0x7201c780ba175afe737a4340e17c26713a5c86953b4e4f0cefed1de5dc01937
 
 **Game Room Factory:**
 - ClassHash: 0x5903a51f204a4d87c428aba9db2e5a6c01565d55bd6a09f6ee79572c89277ef
-- ContractAddress: 0x02909102709cbd49f3d5cccc85056bc489c81b09baecdc98f44bb4cb0f7b9a74
+- ContractAddress: 0x047f99a9f800fc06366f32ad78d67b6c115182036292c049574d4d9ede3278d3
 
 ## Development notes
 - ECDSA Signature verification libfuncs are still experimental on Cairo1. I had to deploy a Cairo0 contract to verify signatures.
-- Reading packed variables produced errors when compiling for deployment (https://github.com/starkware-libs/cairo/issues/3153). I had to remove all variable packing.
+- Reading packed variables produced errors when compiling for deployment (https://github.com/starkware-libs/cairo/issues/3153). All custom-packing StorageAccess replaced with non-packing variants.
 - Upcasting and downcasting are also still experimental. Had to convert all values through felt252.
 - u256 division was also still experimental. Used u128 division for token balances, assuming it would never go over u128 max value.

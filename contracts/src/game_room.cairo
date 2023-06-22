@@ -84,6 +84,17 @@ mod GameRoom {
             player_number,
             Player { address: player_address, offchain_public_key: offchain_public_key }
         );
+
+        _players::write(
+            if (player_number == 0_u8) { 1_u8 } else { 0_u8 },
+            Player {
+                address: 0.try_into().unwrap(),
+                offchain_public_key: 0.try_into().unwrap()
+            }
+        );
+
+        _state::write(initial_game_state());
+        _optimal_predictable_result::write(false);        
     }
 
     //***********************************************************//
@@ -138,6 +149,11 @@ mod GameRoom {
     #[view]
     fn wager() -> u256 {
         _wager::read()
+    }
+
+    #[view]
+    fn fee() -> u128 {
+        _fee::read()
     }
 
     #[view]
@@ -255,7 +271,6 @@ mod GameRoom {
     fn _start_game() {
         _status::write(GameRoomStatus::InProgress(()));
         _set_deadline(60_u64);
-        _state::write(initial_game_state());
         GameStarted();
     }
 
@@ -434,7 +449,7 @@ mod GameRoom {
 
     fn _set_deadline(minutes: u64) {
         let block_timestamp = get_block_timestamp();
-        let deadline = block_timestamp + (minutes * 60_u64 * 1000_u64);
+        let deadline = block_timestamp + (minutes * 60_u64);
         _deadline::write(deadline);
     }
 

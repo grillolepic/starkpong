@@ -9,10 +9,12 @@ import {
 } from '@/helpers/blockchainConstants';
 
 import GAME_ROOM_FACTORY_ABI from '@/stores/abi/GameRoomFactory.json' assert { type: 'json' };
+import GAME_ROOM_ABI from '@/stores/abi/GameRoom.json' assert { type: 'json' };
 
 let _starknetStore = null;
 let _gameTokenStore = null;
 let _gameRoomStore = null;
+let _gameRoomToJoinTimeout = null;
 let _gameRoomFactoryContract = null;
 
 let _initialState = {
@@ -20,9 +22,10 @@ let _initialState = {
     
     gameRoomToJoin: {
         address: null,
+        opponent: null,
         lastInput: 0,
         checking: false,
-        wager: '',
+        wager: null,
         error: null
     }
 }
@@ -126,23 +129,48 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
         },
 
         updateGameRoomToJoin(gameRoomAddress, instant) {
-            console.log(gameRoomAddress);
+            console.log(`game_room_factory: updateGameRoomToJoin(${gameRoomAddress}, ${instant})`);
 
-            //TODO: Check if the game room is valid after a timeout
             this.gameRoomToJoin = {
                 address: gameRoomAddress,
                 lastInput: Date.now(),
                 checking: false,
-                wager: ''
+                wager: null,
+                opponent: null
             };
 
+            clearTimeout(_gameRoomToJoinTimeout);
+
             if (instant) {
-
+                this._getGameRoomToJoinInfo();
             } else {
-                let a = setTimeout(() => {});
-                clearTimeout(a);
+                _gameRoomToJoinTimeout = setTimeout(this._getGameRoomToJoinInfo, 1000);
             }
+        },
 
+        async _getGameRoomToJoinInfo() {
+            console.log('game_room_factory: _getGameRoomToJoinInfo()');
+
+            let gameRoomToJoinContract = new Contract(GAME_ROOM_ABI, this.gameRoomToJoin.address, _starknetStore.account);
+
+            let result_0 = await gameRoomToJoinContract.is_active();
+            console.log("is_active: ", result_0);
+
+            let result_1 = await gameRoomToJoinContract.status();
+            console.log("status: ", result_1);
+
+            let result_2 = await gameRoomToJoinContract.game_state();
+            console.log("game_state: ", result_2);
+
+            let result_3 = await gameRoomToJoinContract.players();
+            console.log("players: ", result_3);
+
+            let result_4 = await gameRoomToJoinContract.wager();
+            console.log("wager: ", result_4);
+
+            let result_5 = await gameRoomToJoinContract.random_seed();
+            console.log("random_seed: ", result_5);
+            
         },
 
         loggedOut() {
