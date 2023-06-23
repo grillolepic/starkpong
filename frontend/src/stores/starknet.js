@@ -3,8 +3,9 @@ import { connect, disconnect } from '@argent/get-starknet';
 import { Contract, validateAndParseAddress, Provider, constants } from 'starknet';
 import { formatEther } from '@/helpers/ethereumHelpers';
 import { useGameTokenStore } from './game_token';
-import { useGameRoomStore } from './game_room';
 import { useGameRoomFactoryStore } from './game_room_factory';
+import { useGameRoomStore } from './game_room';
+import { useGameStore } from './game';
 import {
   etherAddress,
   networkNames,
@@ -16,9 +17,11 @@ import {
 import ETH_ABI from '@/stores/abi/eth.json' assert { type: 'json' };
 
 let _starknet = null;
-let _gameTokenStore = null;
-let _gameRoomStore = null;
-let _gameRoomFactoryStore = null;
+let _gameTokenStore;
+let _gameRoomFactoryStore;
+let _gameRoomStore;
+let _gameStore;
+
 let _etherContract = null;
 let _fixed_mainnet_provider = new Provider({ sequencer: { network: constants.NetworkName.SN_MAIN } });
 
@@ -83,13 +86,11 @@ export const useStarknetStore = defineStore('starknet', {
           this.login();
         }
       }
-      this.initialized = true;
       _gameTokenStore = useGameTokenStore();
-      _gameTokenStore.init();
       _gameRoomFactoryStore = useGameRoomFactoryStore();
-      _gameRoomFactoryStore.init();
       _gameRoomStore = useGameRoomStore();
-      _gameRoomStore.init();
+      _gameStore = useGameStore();
+      this.initialized = true;
     },
 
     async connectStarknet() {

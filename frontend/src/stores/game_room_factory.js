@@ -14,12 +14,12 @@ import GAME_ROOM_ABI from '@/stores/abi/GameRoom.json' assert { type: 'json' };
 let _starknetStore = null;
 let _gameTokenStore = null;
 let _gameRoomStore = null;
+
 let _gameRoomToJoinTimeout = null;
 let _gameRoomFactoryContract = null;
 
 let _initialState = {
     loadingGameRoom: true,
-
     lastGameRoom: null,
 
     gameRoomToJoin: {
@@ -46,15 +46,12 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
     },
 
     actions: {
-        async init() {
-            console.log('game_room_factory: init()');
+        loggedIn() {
+            console.log('game_room_factory: loggedIn()');
             _starknetStore = useStarknetStore();
             _gameTokenStore = useGameTokenStore();
             _gameRoomStore = useGameRoomStore();
-        },
-
-        loggedIn() {
-            console.log('game_room_factory: loggedIn()');
+            
             if (_starknetStore.isStarknetReady) {
                 _gameRoomFactoryContract = new Contract(GAME_ROOM_FACTORY_ABI, gameRoomFactoryAddress[_starknetStore.chainId], _starknetStore.account);
                 this.updateGameRoom();
@@ -69,6 +66,11 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
 
         async updateGameRoom() {
             console.log('game_room_factory: updateGameRoom()');
+            if (_starknetStore == null) {
+                _starknetStore = useStarknetStore();
+                _gameTokenStore = useGameTokenStore();
+                _gameRoomStore = useGameRoomStore();
+            }
 
             if (!_starknetStore.isStarknetReady) {
                 this.loadingGameRoom = true;
@@ -310,7 +312,6 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
             console.log('game_room_factory: loggedOut()');
             _gameRoomFactoryContract = null;
             this.$patch({ ..._initialState });
-            this.initialized = true;
         }
     }
 });

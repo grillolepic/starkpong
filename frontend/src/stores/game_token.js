@@ -12,6 +12,7 @@ import GAME_TOKEN_FAUCET_ABI from '@/stores/abi/GameTokenFaucet.json' assert { t
 import { isNavigationFailure } from 'vue-router';
 
 let _starknetStore = null;
+
 let _gameTokenContract = null;
 let _gameTokenFaucetContract = null;
 
@@ -37,13 +38,9 @@ export const useGameTokenStore = defineStore('game_token', {
     },
 
     actions: {
-        async init() {
-            console.log('game_token: init()');
-            _starknetStore = useStarknetStore();
-        },
-
         loggedIn() {
             console.log('game_token: loggedIn()');
+            _starknetStore = useStarknetStore();
             if (_starknetStore.isStarknetReady) {
                 _gameTokenContract = new Contract(GAME_TOKEN_ABI, gameTokenAddress[_starknetStore.chainId], _starknetStore.account);
                 if (_starknetStore.isTestnet) {
@@ -117,7 +114,6 @@ export const useGameTokenStore = defineStore('game_token', {
             console.log('game_token: loggedOut()');
             _gameTokenContract = null;
             this.$patch({ ..._initialState });
-            this.initialized = true;
         }
     }
 });
