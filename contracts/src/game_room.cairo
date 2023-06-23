@@ -64,7 +64,7 @@ mod GameRoom {
 
         #[view]
         fn player(number: u8) -> Player {
-            _players::read(0_u8)
+            _players::read(number)
         }
     }
 
@@ -197,17 +197,17 @@ mod GameRoom {
         let status = _status::read();
 
         if (status == GameRoomStatus::InProgress(())) {
-            assert_deadline();
+            assert_past_deadline();
         } else {
             assert_status(GameRoomStatus::WaitingForPlayers(()));
-        }
-
-        let player_0 = _players::read(0_u8);
-        if (player_0.address.is_non_zero()) {
-            assert(player_0.address == get_caller_address(), 'WRONG_PLAYER');
-        } else {
-            let player_1 = _players::read(1_u8);
-            assert(player_1.address == get_caller_address(), 'WRONG_PLAYER');
+            // Only the player who created the room can close it befor it started
+            let player_0 = _players::read(0_u8);
+            if (player_0.address.is_non_zero()) {
+                assert(player_0.address == get_caller_address(), 'WRONG_PLAYER');
+            } else {
+                let player_1 = _players::read(1_u8);
+                assert(player_1.address == get_caller_address(), 'WRONG_PLAYER');
+            }
         }
 
         _refund_wagers();

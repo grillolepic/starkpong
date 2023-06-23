@@ -1,9 +1,12 @@
 <script setup>
+import { onMounted } from 'vue';
 import { useStarknetStore } from '../stores/starknet';
 import { useGameRoomStore } from '../stores/game_room';
+import { useGameRoomFactoryStore } from '../stores/game_room_factory';
 
 const starknetStore = useStarknetStore();
 const gameRoomStore = useGameRoomStore();
+const gameRoomFactoryStore = useGameRoomFactoryStore();
 
 function inviteLink() {
     const splitUrl = window.location.href.split("/");
@@ -15,19 +18,26 @@ function inviteLink() {
         console.error('Async: Could not copy text: ', err);
     });
 }
+
+onMounted(() => {
+    gameRoomFactoryStore.updateGameRoom();
+    starknetStore.resetTransaction();
+});
 </script>
 
 <template>
     <div class="flex column flex-center max-height-without-navbar">
         <div class="flex column flex-center">
             <div class="logo">Game Room</div>
+            <div class="room_address">{{ gameRoomStore.currentGameRoom }}</div>
+            
             <div class="flex column flex-center" v-if="starknetStore.transaction.status == null">
                 <div v-if="true" class="flex column flex-center">
                     <div class="inline-spinner"></div>
                     <div class="info">Waiting for opponent to join...</div>
 
                     <div class="button big-button" @click="inviteLink()">COPY INVITE LINK</div>
-                    <div class="button big-button" @click="closeRoom()">CLOSE ROOM</div>
+                    <div class="button big-button" @click="gameRoomStore.closeRoom()">CLOSE ROOM</div>
                 </div>
                 <div v-else class="flex column flex-center">
                     <div class="button big-button">CLOSE ROOM</div>
@@ -46,6 +56,11 @@ function inviteLink() {
 .logo {
     font-size: 65px;
     line-height: 65px;
+}
+
+.room_address {
+    font-size: 12px;
+    letter-spacing: 1.15px;
 }
 
 .info {

@@ -2,9 +2,12 @@
 import { RouterLink } from 'vue-router';
 import { useStarknetStore } from '../stores/starknet';
 import { useGameRoomStore } from '../stores/game_room';
+import { useGameRoomFactoryStore } from '../stores/game_room_factory';
+import TransactionStatus from '../components/TransactionStatus.vue';
 
 const starknetStore = useStarknetStore();
 const gameRoomStore = useGameRoomStore();
+const gameRoomFactoryStore = useGameRoomFactoryStore();
 </script>
 
 <template>
@@ -12,8 +15,17 @@ const gameRoomStore = useGameRoomStore();
         <div id="MainMenu" class="flex column flex-center">
             <div class="logo">StarkPong</div>
             <div class="info">A fully P2P real-time, multiplayer game. Secured by StarkNet.</div>
-            <div v-if="gameRoomStore.currentGameRoom != null" class="flex column section">
-                <RouterLink :to="{ name: 'GameRoom', params: { id: gameRoomStore.currentGameRoom }}"><div class="button big-button">CONTINUE GAME</div></RouterLink>
+            <div v-if="gameRoomFactoryStore.loadingGameRoom">
+                <div class="inline-spinner"></div>
+            </div>
+            <div v-else-if="starknetStore.transaction.status != null">
+                <TransactionStatus />
+            </div>
+            <div v-else-if="gameRoomStore.currentGameRoom != null" class="flex column section">
+                <RouterLink :to="{ name: 'GameRoom' }"><div class="button big-button">CONTINUE GAME</div></RouterLink>
+            </div>
+            <div v-else-if="gameRoomFactoryStore.lastGameRoom != null">
+                <div class="button big-button" @click="gameRoomFactoryStore.exitLastGameRoom()">EXIT UNFINISHED GAME</div>
             </div>
             <div v-else class="flex column section">
                 <RouterLink to="/create"><div class="button big-button">CREATE A GAME ROOM</div></RouterLink>

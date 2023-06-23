@@ -20,6 +20,8 @@ let _gameRoomFactoryContract = null;
 let _initialState = {
     loadingGameRoom: true,
 
+    lastGameRoom: null,
+
     gameRoomToJoin: {
         address: null,
         opponent: null,
@@ -29,7 +31,9 @@ let _initialState = {
         opponent: null,
         status: null,
         error: null
-    }
+    },
+
+    gamesPlayed: null
 }
 
 export const useGameRoomFactoryStore = defineStore('game_room_factory', {
@@ -57,6 +61,12 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
             }
         },
 
+        async updateGameRoomCount() {
+            console.log('game_room_factory: updateGameRoomCount()');
+            let gamesPlayed = await _gameRoomFactoryContract.game_room_count();
+            this.gamesPlayed = gamesPlayed;
+        },
+
         async updateGameRoom() {
             console.log('game_room_factory: updateGameRoom()');
 
@@ -71,19 +81,44 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
             let current_game_room = await _gameRoomFactoryContract.current_game_room(_starknetStore.address);
 
             if (current_game_room == 0n) {
-                this.loadingGameRoom = false;
-                return _gameRoomStore.reset();
-            } else {
-                current_game_room = '0x' + current_game_room.toString(16);
+                _gameRoomStore.reset(true);
+                
+                //Check if the last game room can be withdrawn from
+                let last_game_room = await _gameRoomFactoryContract.last_game_room(_starknetStore.address);
+                if (last_game_room != 0n) {
 
-                let currentPath = this.$router.currentRoute.fullPath;
-                if (currentPath != `/rooom/${current_game_room}`) {
-                    this.$router.push({ name: 'GameRoom', params: { id: current_game_room } });
+                    last_game_room = '0x' + last_game_room.toString(16);
+
+                    //Check if the last game room is still active
+                    let lastGameRoomContract = new Contract(GAME_ROOM_ABI, last_game_room, _starknetStore.account);
+                    let lastGameRoomStatus = await lastGameRoomContract.status();
+                    lastGameRoomStatus = lastGameRoomStatus["0"];
+
+                    if (lastGameRoomStatus == 0n || lastGameRoomStatus == 1n || lastGameRoomStatus == 3n) {
+                        this.lastGameRoom = {
+                            address: last_game_room,
+                            status: lastGameRoomStatus
+                        };
+
+                        let routeName = this.$router.currentRoute.value.name;
+                        if (routeName != "Home") {
+                            this.$router.push({ name: 'Home' });
+                        }
+                    }
                 }
+            } else {
+                this.lastGameRoom = null;
 
+                current_game_room = '0x' + current_game_room.toString(16);
                 await _gameRoomStore.loadGameRoom(current_game_room);
+
+                let routeName = this.$router.currentRoute.value.name;
+                if (routeName != "GameRoom") {
+                    this.$router.push({ name: 'GameRoom' });
+                }
             }
 
+            this.updateGameRoomCount();
             this.loadingGameRoom = false;
         },
 
@@ -259,6 +294,22 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
             };
 
             clearTimeout(_gameRoomToJoinTimeout);
+        },
+
+        async exitLastGameRoom() {
+            console.log('game_room_factory: exitLastGameRoom()');
+
+            if (this.lastGameRoom == null) return;
+
+            let gameRoomContract = new Contract(GAME_ROOM_ABI, this.lastGameRoom.address, _starknetStore.account);
+            let function_name = (this.lastGameRoom.status == 0n || this.lastGameRoom.status == 1n)?"close_game_room":"finish_exit_with_partial_result";
+
+            if (await _starknetStore.sendTransactions([gameRoomContract.populate(function_name, [])])) {
+                setTimeout(() => {
+                    _starknetStore.resetTransaction();
+                    this.updateGameRoom()
+                }, 2000);
+            }
         },
 
         loggedOut() {
