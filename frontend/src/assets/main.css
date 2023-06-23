@@ -108,3 +108,10 @@ body {
 .red {
   color: var(--red);
 }
+.small {
+  font-size: 12px;
+}
+
+.big {
+  font-size: 21px;
+}

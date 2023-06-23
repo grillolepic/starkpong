@@ -108,14 +108,8 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
                 }
             } else {
                 this.lastGameRoom = null;
-
                 current_game_room = '0x' + current_game_room.toString(16);
                 await _gameRoomStore.loadGameRoom(current_game_room);
-
-                let routeName = this.$router.currentRoute.value.name;
-                if (routeName != "GameRoom") {
-                    this.$router.push({ name: 'GameRoom' });
-                }
             }
 
             this.updateGameRoomCount();
@@ -135,7 +129,6 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
             }
 
             //Verify that the user has no active game room
-            await this.updateGameRoom();
             if (_gameRoomStore.currentGameRoom != null) return;
 
             //Create an offchain KeyPair
@@ -158,8 +151,9 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
 
                 calls.push(await _gameRoomFactoryContract.populate("create_room", [starkKey, wager]));
                 if (await _starknetStore.sendTransactions(calls)) {
-                    _gameTokenStore.updateBalance();
                     this.updateGameRoom();
+                    _gameTokenStore.updateBalance();
+                    _starknetStore.resetTransaction();
                 }
 
             } catch (err) {
@@ -204,8 +198,9 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
 
                 calls.push(await gameRoomToJoinContract.populate("join_game_room", [starkKey]));
                 if (await _starknetStore.sendTransactions(calls)) {
-                    _gameTokenStore.updateBalance();
                     this.updateGameRoom();
+                    _gameTokenStore.updateBalance();
+                    _starknetStore.resetTransaction();
                 }
 
             } catch (err) {
@@ -305,10 +300,9 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
             let function_name = (this.lastGameRoom.status == 0n || this.lastGameRoom.status == 1n)?"close_game_room":"finish_exit_with_partial_result";
 
             if (await _starknetStore.sendTransactions([gameRoomContract.populate(function_name, [])])) {
-                setTimeout(() => {
-                    _starknetStore.resetTransaction();
-                    this.updateGameRoom()
-                }, 2000);
+                this.updateGameRoom();
+                _gameTokenStore.updateBalance();
+                _starknetStore.resetTransaction();
             }
         },
 

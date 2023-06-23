@@ -29,7 +29,7 @@ defineExpose({ tokenAmount });
 
 <template>
     <div id="TokenInputContainer" class="flex row flex-center">
-        <div class="label bold">Bet:</div>
+        <div class="label">Bet:</div>
         <div id="tokenInput" class="flex row flex-center">
             <input v-model="tokenAmount" @change="onChange" @input="onInput">
             <div class="max" @click="useMax()">USE MAX</div>
@@ -71,7 +71,7 @@ defineExpose({ tokenAmount });
 }
 
 input {
-    width: 200px;
+    width: 250px;
     background-color: transparent;
     border: none;
     color: var(--white);

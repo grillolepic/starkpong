@@ -19,11 +19,11 @@ Save for the Cairo0 one, all contracts were compiled/declared/deployed with: **s
 - ContractAddress: 0x0090eb31ad0d49d1a1dc446379a74a5a5a40908a7be3838fe93ef5d5a801ef6b
 
 **Game Room:**
-- ClassHash: 0x1d7be3d5c52ca30dc5777e110c134c9d8ed47a7b291fcc7ba821dcf28b04d08
+- ClassHash: 0x566fd1779ad12cecae2e6d403c3515c793f466b35e42ca73822f7b602c2c494
 
 **Game Room Factory:**
 - ClassHash: 0x53a0aa69b90c94befc172b9f96d2320e46876b6928e9af76c890c3a53ab1462
-- ContractAddress: 0x0485cbfeeb67e014e64e50897ecf93de9cc1b5cf6c2cd1adb530826b6f91f643
+- ContractAddress: 0x03c26e12ddf74993db24a32956180b01de4753b1896751c0db70971c62732153
 
 ## Development notes
 - ECDSA Signature verification libfuncs are still experimental on Cairo1. I had to deploy a Cairo0 contract to verify signatures.

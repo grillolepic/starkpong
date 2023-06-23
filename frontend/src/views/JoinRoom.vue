@@ -39,7 +39,7 @@ function onInput() {
             <div id="createRoomContents" class="flex column flex-center"
                 v-if="starknetStore.transaction.status == null && !gameRoomFactoryStore.loadingGameRoom">
                 <div id="ContractInputContainer" class="flex row flex-center">
-                    <div class="label bold">Address:</div>
+                    <div class="label">Address:</div>
                     <div id="contractInput" class="flex row flex-center">
                         <input type="text" v-model="game_room_contract" @input="onInput" />
                     </div>
@@ -50,7 +50,7 @@ function onInput() {
                 <div v-else-if="gameRoomFactoryStore.gameRoomToJoin.error == null && gameRoomFactoryStore.gameRoomToJoin.wager != null"
                     class="flex column flex-center gameInfoSection">
                     <div class="flex row flex-center">
-                        <div class="label bold">Required bet:</div>
+                        <div class="label">Required bet:</div>
                         <div class="info">{{ parseFloat(formatEther(gameRoomFactoryStore.gameRoomToJoin.wager)) }} <span
                                 class="bold">{{
                                     gameTokenStore.tokenName }}</span></div>

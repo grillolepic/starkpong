@@ -22,7 +22,7 @@ const gameRoomFactoryStore = useGameRoomFactoryStore();
                 <TransactionStatus />
             </div>
             <div v-else-if="gameRoomStore.currentGameRoom != null" class="flex column section">
-                <RouterLink :to="{ name: 'GameRoom' }"><div class="button big-button">CONTINUE GAME</div></RouterLink>
+                <div class="button big-button" @click="gameRoomStore.redirectFromStatus(true)">CONTINUE GAME</div>
             </div>
             <div v-else-if="gameRoomFactoryStore.lastGameRoom != null">
                 <div class="button big-button" @click="gameRoomFactoryStore.exitLastGameRoom()">EXIT UNFINISHED GAME</div>

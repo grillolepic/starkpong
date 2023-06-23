@@ -94,6 +94,11 @@ mod GameRoom {
             Player { address: player_address, offchain_public_key: offchain_public_key }
         );
 
+        let empty_address: ContractAddress = 0.try_into().unwrap();
+        let empty_player = Player { address: empty_address, offchain_public_key: empty_address };
+        let empty_player_number: u8 = _get_empty_player_number().unwrap();
+        _players::write(empty_player_number, empty_player);
+
         _state::write(initial_game_state());
         _optimal_predictable_result::write(false);
     }

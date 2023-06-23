@@ -3,10 +3,13 @@ import { onMounted } from 'vue';
 import { useStarknetStore } from '../stores/starknet';
 import { useGameRoomStore } from '../stores/game_room';
 import { useGameRoomFactoryStore } from '../stores/game_room_factory';
+import { useRouter } from 'vue-router';
+import TransactionStatus from '../components/TransactionStatus.vue';
 
 const starknetStore = useStarknetStore();
 const gameRoomStore = useGameRoomStore();
 const gameRoomFactoryStore = useGameRoomFactoryStore();
+const router = useRouter();
 
 function inviteLink() {
     const splitUrl = window.location.href.split("/");
@@ -20,8 +23,8 @@ function inviteLink() {
 }
 
 onMounted(() => {
-    gameRoomFactoryStore.updateGameRoom();
     starknetStore.resetTransaction();
+    gameRoomStore.redirectFromStatus();
 });
 </script>
 
@@ -30,20 +33,23 @@ onMounted(() => {
         <div class="flex column flex-center">
             <div class="logo">Game Room</div>
             <div class="room_address">{{ gameRoomStore.currentGameRoom }}</div>
-            
-            <div class="flex column flex-center" v-if="starknetStore.transaction.status == null">
-                <div v-if="true" class="flex column flex-center">
-                    <div class="inline-spinner"></div>
-                    <div class="info">Waiting for opponent to join...</div>
 
-                    <div class="button big-button" @click="inviteLink()">COPY INVITE LINK</div>
-                    <div class="button big-button" @click="gameRoomStore.closeRoom()">CLOSE ROOM</div>
-                </div>
-                <div v-else class="flex column flex-center">
-                    <div class="button big-button">CLOSE ROOM</div>
-                </div>
+            <div class="flex column flex-center" v-if="starknetStore.transaction.status != null">
+                <TransactionStatus />
             </div>
-            <TransactionStatus v-else />
+            <div v-else-if="gameRoomStore.loadingGameRoom">
+                <div class="inline-spinner"></div>
+            </div>
+            <div v-else-if="gameRoomStore.error == null" class="flex column flex-center">
+                <div class="info ">Invite another player to start the game.</div>
+                <div class="deadline small">Deadline: {{ (new Date(Number(gameRoomStore.deadline * 1000))).toLocaleString() }}</div>
+                <div class="button big-button" @click="inviteLink()">COPY INVITE LINK</div>
+                <div class="button big-button" @click="gameRoomStore.closeRoom()">CLOSE ROOM</div>
+            </div>
+            <div v-else>
+                <div class="info big red bold">Error: {{ gameRoomStore.error }}</div>
+                <div class="button big-button" @click="gameRoomStore.closeRoom()">CLOSE ROOM</div>
+            </div>
         </div>
     </div>
 
@@ -63,9 +69,20 @@ onMounted(() => {
     letter-spacing: 1.15px;
 }
 
+.label {
+    margin-right: 10px;
+}
+
+
 .info {
     margin-top: 15px;
     text-align: center;
+}
+
+.deadline {
+    margin-top: 5px;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
 .inline-spinner {

@@ -184,6 +184,8 @@ export const useStarknetStore = defineStore('starknet', {
           this.transaction.status = 1;
           await _starknet.provider.waitForTransaction(result.transaction_hash);
 
+          await sleep(5000);
+
           this.transaction.status = 2;
           this.updateBalance();
           return true;
@@ -219,3 +221,7 @@ export const useStarknetStore = defineStore('starknet', {
     }
   }
 })
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

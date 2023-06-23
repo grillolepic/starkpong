@@ -21,6 +21,7 @@ let _initialState = {
     status: null,
     deadline: null,
     past_deadline: null,
+    wager: null,
     
     error: null
 }
@@ -40,8 +41,8 @@ export const useGameRoomStore = defineStore('game_room', {
             _gameRoomFactoryStore = useGameRoomFactoryStore();
         },
 
-        async loadGameRoom(game_room_address) {
-            console.log(`game_room: loadGameRoom(${game_room_address})`);
+        async loadGameRoom(game_room_address, is_reload = false) {
+            console.log(`game_room: loadGameRoom(${game_room_address}, ${is_reload})`);
 
             if (!_starknetStore.isStarknetReady) {
                 return this.$patch({
@@ -50,7 +51,7 @@ export const useGameRoomStore = defineStore('game_room', {
                 });
             }
 
-            this.reset();
+            if (!is_reload) { this.reset(); }
 
             this.loadingGameRoom = true;
             this.currentGameRoom = game_room_address;
@@ -59,7 +60,6 @@ export const useGameRoomStore = defineStore('game_room', {
                 _gameRoomContract = new Contract(GAME_ROOM_ABI, game_room_address, _starknetStore.account);
 
                 let status_response = await _gameRoomContract.status();
-
                 let status = status_response["0"];
                 let deadline = Number(status_response["1"]);
                 let past_deadline = (deadline <= Math.floor(Date.now() / 1000));
@@ -74,15 +74,7 @@ export const useGameRoomStore = defineStore('game_room', {
 
                 let player_0_response = await _gameRoomContract.player(0);
                 let player_1_response = await _gameRoomContract.player(1);
-                let players_response = await _gameRoomContract.players();
                 let my_player = null;
-
-                console.log(game_room_address);
-                console.log(player_0_response);
-                console.log(player_1_response);
-                console.log(players);
-                console.log(_starknetStore.address);
-                return;
 
                 if (player_0_response.address == BigInt(_starknetStore.address)) {
                     this.myPlayerNumber = 0;
@@ -98,13 +90,16 @@ export const useGameRoomStore = defineStore('game_room', {
                     return this.$router.push({ name: 'Home' });
                 }
 
+                let wager = await _gameRoomContract.wager();
+
                 this.$patch({
                     status: status,
                     deadline: deadline,
                     past_deadline: past_deadline,
                     player_0: player_0_response,
                     player_1: player_1_response,
-                    my_player: my_player
+                    my_player: my_player,
+                    wager: wager
                 });
 
                 //Obtain the saved private key
@@ -129,15 +124,12 @@ export const useGameRoomStore = defineStore('game_room', {
                     return;
                 }
 
-                if (status == 1n) {
+                this.redirectFromStatus();
 
-                    //TODO: Load the offchain game state
-
-                    let routeName = this.$router.currentRoute.value.name;
-                    if (routeName != "Game") {
-                        this.$router.push({ name: 'Game' });
-                    }
+                if (this.status == 0n) {
+                    setTimeout(() => this.loadGameRoom(game_room_address, true), 30 * 1000);
                 }
+                
             } catch (err) {
                 console.log(err);
             }
@@ -145,10 +137,29 @@ export const useGameRoomStore = defineStore('game_room', {
             this.loadingGameRoom = false;
         },
 
-        closeRoom() {
+        redirectFromStatus(fromHome = false) {
+            let routeName = this.$router.currentRoute.value.name;
+
+            if (this.status == 0n) {
+                if (routeName != "GameRoom" && (routeName != "Home" || fromHome)) {
+                    this.$router.push({ name: 'GameRoom' });
+                }
+            } else  if (this.status == 1n) {
+                if (routeName != "Game" && (routeName != "Home" || fromHome)) {
+                    this.$router.push({ name: 'Game' });
+                }
+            }
+        },
+
+        async closeRoom() {
             console.log(`game_room: closeRoom()`);
 
-            _gameRoomContract.close_room();
+            if (_gameRoomContract == null) return;
+
+            if (await _starknetStore.sendTransactions([_gameRoomContract.populate("close_game_room", [])])) {
+                _starknetStore.resetTransaction();
+                this.updateGameRoom();
+            }
         },
 
         reset(redirect_to_home = false) {

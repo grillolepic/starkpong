@@ -10,7 +10,7 @@ const starknetStore = useStarknetStore();
 const gameRoomFactoryStore = useGameRoomFactoryStore();
 
 onMounted(() => {
-    gameRoomFactoryStore.updateGameRoom();
+    //gameRoomFactoryStore.updateGameRoom();
 });
 
 </script>
