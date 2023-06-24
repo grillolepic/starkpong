@@ -12,7 +12,7 @@ use stark_pong::utils::signature_verification::external_verify;
 #[derive(Drop, Serde, Copy)]
 enum Action {
     MoveUp: (),
-    Static: (),
+    NoMove: (),
     MoveDown: ()
 }
 
@@ -20,7 +20,7 @@ impl IntoFelt252ActionImpl of Into<Action, felt252> {
     fn into(self: Action) -> felt252 {
         match self {
             Action::MoveUp(()) => 0,
-            Action::Static(()) => 1,
+            Action::NoMove(()) => 1,
             Action::MoveDown(()) => 2,
         }
     }
@@ -33,7 +33,7 @@ impl IntoActionFelt252Impl of Into<felt252, Action> {
         } else if (self == 2) {
             return Action::MoveDown(());
         }
-        Action::Static(())
+        Action::NoMove(())
     }
 }
 

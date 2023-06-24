@@ -188,8 +188,8 @@ export const useGameRoomStore = defineStore('game_room', {
                     size: bigint_to_string ? ball["size"].toString() : ball["size"],
                     speed_x: bigint_to_string ? ball["speed_x"].toString() : ball["speed_x"],
                     speed_y: bigint_to_string ? ball["speed_y"].toString() : ball["speed_y"],
-                    moving_up: paddle_1["moving_up"],
-                    moving_left: paddle_1["moving_left"]
+                    moving_up: ball["moving_up"],
+                    moving_left: ball["moving_left"]
                 }
             };
         },

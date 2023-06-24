@@ -99,7 +99,7 @@ mod GameRoom {
         let empty_player_number: u8 = _get_empty_player_number().unwrap();
         _players::write(empty_player_number, empty_player);
 
-        _state::write(initial_game_state());
+        _state::write(initial_game_state(random_seed));
         _optimal_predictable_result::write(false);
     }
 
@@ -373,6 +373,9 @@ mod GameRoom {
 
     fn _partial_exit(use_optimal_predictable_result: bool) {
         //The last played signed turn to update the state must be by the player calling for the exit
+
+        //TODO SAVE THE EXIT_PLAYER_NUMBER and make an exception to rule enforcement when exiting on turn 0
+
         let last_turn = _state::read().turn;
         let player_number = _get_caller_player_number().unwrap();
         let player_number_from_state_turn = player_number_from_turn(last_turn);
@@ -386,6 +389,9 @@ mod GameRoom {
     }
 
     fn _dispute_partial_result(evidence: TurnAction) {
+
+        //TODO use the new EXIT_PLAYER_NUMBER and make an exception to rule enforcement when exiting on turn 0
+
         //Disputing a result requires a signed turn from the Player who exited the game,
         //which is higher than the last turn saved to the game state
         let exited_player_number = player_number_from_turn(_state::read().turn);
@@ -535,6 +541,11 @@ mod GameRoom {
     }
 
     fn _pay_prize_and_fees(player_number: Option<u8>) {
+
+        //NEW LOGIC FOR PARTIAL WIN:
+        //Exponentially increasing reward for the player who won the game
+        //Remaining goes to the factory contract
+
         if (_wager::read() > 0_u256) {
             let contract_address = get_contract_address();
             let factory_address = _factory_address::read();

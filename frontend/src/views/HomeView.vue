@@ -28,9 +28,16 @@ const gameRoomFactoryStore = useGameRoomFactoryStore();
                 <div class="button big-button" @click="gameRoomFactoryStore.exitLastGameRoom()">EXIT UNFINISHED GAME</div>
             </div>
             <div v-else class="flex column section">
-                <RouterLink to="/create"><div class="button big-button">CREATE A GAME ROOM</div></RouterLink>
-                <RouterLink to="/join"><div class="button big-button">JOIN A GAME ROOM</div></RouterLink>
-                <RouterLink to="/faucet"><div class="button big-button" v-if="starknetStore.isTestnet"><span class="bold">PONG</span> FAUCET</div></RouterLink>
+                <RouterLink to="/create">
+                    <div class="button big-button">CREATE A GAME ROOM</div>
+                </RouterLink>
+                <RouterLink to="/join">
+                    <div class="button big-button">JOIN A GAME ROOM</div>
+                </RouterLink>
+                <RouterLink to="/faucet">
+                    <div class="button big-button" v-if="starknetStore.isTestnet"><span class="bold">PONG</span> FAUCET
+                    </div>
+                </RouterLink>
             </div>
         </div>
     </div>
@@ -38,8 +45,8 @@ const gameRoomFactoryStore = useGameRoomFactoryStore();
 
 <style scoped>
 .logo {
-  font-size: 65px;
-  line-height: 65px;
+    font-size: 65px;
+    line-height: 65px;
 }
 
 .info {
