@@ -143,13 +143,25 @@ mod GameRoom {
     }
 
     #[view]
-    fn game_state() -> GameState {
-        _state::read()
+    fn game_state() -> (u64, u8, u8) {
+        let state = _state::read();
+        (state.turn, state.score_0, state.score_1)
     }
 
     #[view]
-    fn players() -> (Player, Player) {
-        (_players::read(0_u8), _players::read(1_u8))
+    fn ball() -> Ball {
+        let state = _state::read();
+        state.ball
+    }
+
+    #[view]
+    fn paddle(number: u8) -> Paddle {
+        let state = _state::read();
+        if (number == 0_u8) {
+            state.paddle_0
+        } else {
+            state.paddle_1
+        }
     }
 
     #[view]

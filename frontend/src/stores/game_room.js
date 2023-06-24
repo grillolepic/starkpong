@@ -162,32 +162,34 @@ export const useGameRoomStore = defineStore('game_room', {
             if (this.status != GAME_STATUS.IN_PROGRESS && this.status != GAME_STATUS.PARTIAL_EXIT) return;
 
             let gameState = await _gameRoomContract.game_state();
-            console.log(gameState);
+            let paddle_0 = await _gameRoomContract.paddle(0);
+            let paddle_1 = await _gameRoomContract.paddle(1);
+            let ball = await _gameRoomContract.ball();
 
             return {
-                turn: bigint_to_string ? "0" : 0n,
-                score_0: bigint_to_string ? "0" : 0n,
-                score_1: bigint_to_string ? "0" : 0n,
+                turn: bigint_to_string ? gameState["0"].toString() : gameState["0"],
+                score_0: bigint_to_string ? gameState["1"].toString() : gameState["1"],
+                score_1: bigint_to_string ? gameState["2"].toString() : gameState["2"],
                 paddle_0: {
-                    y: bigint_to_string ? "15000" : 15000n,
-                    size: bigint_to_string ? "650" : 650n,
-                    speed: bigint_to_string ? "0" : 0n,
-                    moving_up: true
+                    y: bigint_to_string ? paddle_0["y"].toString()     : paddle_0["y"],
+                    size: bigint_to_string ? paddle_0["size"].toString()  : paddle_0["size"],
+                    speed: bigint_to_string ? paddle_0["speed"].toString() : paddle_0["speed"],
+                    moving_up: paddle_0["moving_up"]
                 },
                 paddle_1: {
-                    y: bigint_to_string ? "15000" : 15000n,
-                    size: bigint_to_string ? "650" : 650n,
-                    speed: bigint_to_string ? "0" : 0n,
-                    moving_up: true
+                    y: bigint_to_string ? paddle_1["y"].toString()     : paddle_1["y"],
+                    size: bigint_to_string ? paddle_1["size"].toString()  : paddle_1["size"],
+                    speed: bigint_to_string ? paddle_1["speed"].toString() : paddle_1["speed"],
+                    moving_up: paddle_1["moving_up"]
                 },
                 ball: {
-                    x: bigint_to_string ? "20000" : 20000n,
-                    y: bigint_to_string ? "15000" : 15000n,
-                    size: bigint_to_string ? "150" : 150n,
-                    speed_x: bigint_to_string ? "0" : 0n,
-                    speed_y: bigint_to_string ? "0" : 0n,
-                    moving_up: true,
-                    moving_left: true
+                    x: bigint_to_string ? ball["x"].toString() : ball["x"],
+                    y: bigint_to_string ? ball["y"].toString() : ball["y"],
+                    size: bigint_to_string ? ball["size"].toString() : ball["size"],
+                    speed_x: bigint_to_string ? ball["speed_x"].toString() : ball["speed_x"],
+                    speed_y: bigint_to_string ? ball["speed_y"].toString() : ball["speed_y"],
+                    moving_up: paddle_1["moving_up"],
+                    moving_left: paddle_1["moving_left"]
                 }
             };
         },

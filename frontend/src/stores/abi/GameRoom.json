@@ -76,42 +76,95 @@
         "state_mutability": "view"
     },
     {
-        "type": "struct",
-        "name": "stark_pong::game::game_components::state::GameState",
-        "members": [
-            {
-                "name": "turn",
-                "type": "core::integer::u64"
-            },
-            {
-                "name": "score_0",
-                "type": "core::integer::u8"
-            },
-            {
-                "name": "score_1",
-                "type": "core::integer::u8"
-            },
-            {
-                "name": "paddle_0",
-                "type": "stark_pong::game::game_components::objects::Paddle"
-            },
-            {
-                "name": "paddle_1",
-                "type": "stark_pong::game::game_components::objects::Paddle"
-            },
-            {
-                "name": "ball",
-                "type": "stark_pong::game::game_components::objects::Ball"
-            }
-        ]
-    },
-    {
         "type": "function",
         "name": "game_state",
         "inputs": [],
         "outputs": [
             {
-                "type": "stark_pong::game::game_components::state::GameState"
+                "type": "(core::integer::u64, core::integer::u8, core::integer::u8)"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "struct",
+        "name": "stark_pong::game::game_components::objects::Ball",
+        "members": [
+            {
+                "name": "x",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "y",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "size",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "speed_x",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "speed_y",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "moving_up",
+                "type": "core::bool"
+            },
+            {
+                "name": "moving_left",
+                "type": "core::bool"
+            }
+        ]
+    },
+    {
+        "type": "function",
+        "name": "ball",
+        "inputs": [],
+        "outputs": [
+            {
+                "type": "stark_pong::game::game_components::objects::Ball"
+            }
+        ],
+        "state_mutability": "view"
+    },
+    {
+        "type": "struct",
+        "name": "stark_pong::game::game_components::objects::Paddle",
+        "members": [
+            {
+                "name": "y",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "size",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "speed",
+                "type": "core::integer::u16"
+            },
+            {
+                "name": "moving_up",
+                "type": "core::bool"
+            }
+        ]
+    },
+    {
+        "type": "function",
+        "name": "paddle",
+        "inputs": [
+            {
+                "name": "number",
+                "type": "core::integer::u8"
+            }
+        ],
+        "outputs": [
+            {
+                "type": "stark_pong::game::game_components::objects::Paddle"
             }
         ],
         "state_mutability": "view"
@@ -129,17 +182,6 @@
                 "type": "core::starknet::contract_address::ContractAddress"
             }
         ]
-    },
-    {
-        "type": "function",
-        "name": "players",
-        "inputs": [],
-        "outputs": [
-            {
-                "type": "(stark_pong::utils::player::Player, stark_pong::utils::player::Player)"
-            }
-        ],
-        "state_mutability": "view"
     },
     {
         "type": "function",

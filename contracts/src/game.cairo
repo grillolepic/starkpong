@@ -31,5 +31,5 @@ fn limits_check(game_state: @GameState) -> bool {
 fn randomize_ball_velocity(seed: u64) -> (u16, u16, bool, bool) {
     (10_u16, 10_u16, false, false)
 }
-//fn advance_game_state(state: GameState, action: Action) -> GameState {}
 
+//fn advance_game_state(state: GameState, action: Action) -> GameState {}
