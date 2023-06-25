@@ -28,7 +28,7 @@ let _initialState = {
 
 export const useGameTokenStore = defineStore('game_token', {
     state: () => {
-        return { ..._initialState }
+        return JSON.parse(JSON.stringify(_initialState));
     },
 
     getters: {
@@ -113,7 +113,7 @@ export const useGameTokenStore = defineStore('game_token', {
         loggedOut() {
             console.log('game_token: loggedOut()');
             _gameTokenContract = null;
-            this.$patch({ ..._initialState });
+            this.$patch(JSON.parse(JSON.stringify(_initialState)));
         }
     }
 });

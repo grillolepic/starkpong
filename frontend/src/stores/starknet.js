@@ -45,7 +45,7 @@ let _initialState = {
 
 export const useStarknetStore = defineStore('starknet', {
   state: () => {
-    return { ..._initialState }
+    return JSON.parse(JSON.stringify(_initialState));
   },
 
   getters: {

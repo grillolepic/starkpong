@@ -38,7 +38,7 @@ let _initialState = {
 
 export const useGameRoomFactoryStore = defineStore('game_room_factory', {
     state: () => {
-        return { ..._initialState }
+        return JSON.parse(JSON.stringify(_initialState));
     },
 
     getters: {
@@ -311,7 +311,7 @@ export const useGameRoomFactoryStore = defineStore('game_room_factory', {
         loggedOut() {
             console.log('game_room_factory: loggedOut()');
             _gameRoomFactoryContract = null;
-            this.$patch({ ..._initialState });
+            this.$patch(JSON.parse(JSON.stringify(_initialState)));
         }
     }
 });

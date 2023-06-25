@@ -35,7 +35,7 @@ export const GAME_STATUS = {
 
 export const useGameRoomStore = defineStore('game_room', {
     state: () => {
-        return { ..._initialState }
+        return JSON.parse(JSON.stringify(_initialState));
     },
 
     getters: {},
@@ -218,7 +218,7 @@ export const useGameRoomStore = defineStore('game_room', {
 
         reset(redirect_to_home = false) {
             _gameRoomContract = null;
-            this.$patch({ ..._initialState });
+            this.$patch(JSON.parse(JSON.stringify(_initialState)));
 
             if (redirect_to_home) {
                 let routeName = this.$router.currentRoute.value.name;

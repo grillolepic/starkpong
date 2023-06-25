@@ -11,13 +11,13 @@ let ctx = null;
 
 onMounted(() => {
   gameStore.startGame();
-  _drawInterval = setInterval(draw, 33);
+  _drawInterval = setInterval(draw, 1000);
 
 });
 
 onUnmounted(() => {
   gameStore.reset();
-  clearInterval(_drawInterval)
+  clearInterval(_drawInterval);
 });
 
 function draw() {
@@ -35,7 +35,7 @@ function draw() {
   }
 
   let currentState = gameStore.gameStateForScreen;
-  
+
   if (currentState != null && currentState != undefined) {
 
     ctx.fillStyle = "#FFFFFF";
@@ -46,12 +46,23 @@ function draw() {
 
     //Paddle 1
     ctx.fillRect(780, currentState.paddle_1.y - (currentState.paddle_1.size / 2.0), 20, currentState.paddle_1.size);
-   
+
     //Ball
-    ctx.fillRect(
-      currentState.ball.x - (currentState.ball.size / 2.0),
-      currentState.ball.y - (currentState.ball.size / 2.0),
-      currentState.ball.size, currentState.ball.size);
+    if (gameStore.paused) {
+      let ts = Math.floor(Date.now() / 500);
+      if (ts % 2 == 0) {
+        ctx.fillRect(
+          currentState.ball.x - (currentState.ball.size / 2.0),
+          currentState.ball.y - (currentState.ball.size / 2.0),
+          currentState.ball.size, currentState.ball.size);
+      }
+    } else {
+      ctx.fillRect(
+        currentState.ball.x - (currentState.ball.size / 2.0),
+        currentState.ball.y - (currentState.ball.size / 2.0),
+        currentState.ball.size, currentState.ball.size);
+    }
+
   }
 }
 
@@ -83,13 +94,16 @@ function draw() {
             'PLAYER 2' }}</div>
           <div class="score">{{ gameStore.currentState.score_1 }}</div>
         </div>
+        <div v-if="gameStore.paused" style="width: 20px; height: 20px; background-color: yellow; border-radius: 20px;">
+
+        </div>
       </div>
       <div id="GameSection" class="flex row flex-center max-width">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
       </div>
       <div id="DataSection" class="flex row">
         <div class="flex column data_section">
-          <div class="small">CHECKPOINT: <span class="bold">{{ gameStore.currentState.turn }}</span></div>
+          <div class="small">CHECKPOINT: <span class="bold">{{ gameStore.checkpoint.data.turn }}</span></div>
           <div class="smaller">{{ gameStore.lastCheckpointSignature[0] }}</div>
           <div class="smaller">{{ gameStore.lastCheckpointSignature[1] }}</div>
           <div class="smaller">{{ gameStore.lastCheckpointSignature[2] }}</div>

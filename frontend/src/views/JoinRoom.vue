@@ -14,6 +14,9 @@ const gameRoomFactoryStore = useGameRoomFactoryStore();
 
 let game_room_contract = ref("");
 
+//TODO: ERROR SHOWING DECIMALS
+
+
 onMounted(() => {
     gameRoomFactoryStore.updateGameRoom();
     const route = useRoute();
