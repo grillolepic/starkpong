@@ -770,8 +770,8 @@ export const useGameStore = defineStore('game', {
 
             return {
                 turn: {
-                    turn: turn_as_array_of_felts[0].toString(),
-                    action: turn_as_array_of_felts[1].toString()
+                    turn: turn.toString(),
+                    action: action.toString()
                 },
                 hash: hashedTurn,
                 signature: {
