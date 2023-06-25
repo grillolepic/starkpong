@@ -253,6 +253,24 @@
     },
     {
         "type": "struct",
+        "name": "stark_pong::game::game_components::state::Checkpoint",
+        "members": [
+            {
+                "name": "state",
+                "type": "stark_pong::game::game_components::state::GameState"
+            },
+            {
+                "name": "signature_0",
+                "type": "stark_pong::utils::signature::Signature"
+            },
+            {
+                "name": "signature_1",
+                "type": "stark_pong::utils::signature::Signature"
+            }
+        ]
+    },
+    {
+        "type": "struct",
         "name": "stark_pong::game::game_components::state::GameState",
         "members": [
             {
@@ -296,24 +314,6 @@
         ]
     },
     {
-        "type": "struct",
-        "name": "stark_pong::game::game_components::state::Checkpoint",
-        "members": [
-            {
-                "name": "state",
-                "type": "stark_pong::game::game_components::state::GameState"
-            },
-            {
-                "name": "signature_0",
-                "type": "stark_pong::utils::signature::Signature"
-            },
-            {
-                "name": "signature_1",
-                "type": "stark_pong::utils::signature::Signature"
-            }
-        ]
-    },
-    {
         "type": "function",
         "name": "set_checkpoint",
         "inputs": [
@@ -352,6 +352,13 @@
                 "type": "core::array::Array::<stark_pong::game::game_components::actions::TurnAction>"
             }
         ],
+        "outputs": [],
+        "state_mutability": "external"
+    },
+    {
+        "type": "function",
+        "name": "exit_unplayed",
+        "inputs": [],
         "outputs": [],
         "state_mutability": "external"
     },

@@ -53,6 +53,7 @@ export const INTERNAL_STATUS = {
     CONNECTING_WITH_PLAYERS: 1,
     SYNCING: 2,
     PLAYING: 3,
+    FINISHED: 4
 }
 
 export const MESSAGE_TYPE = {
@@ -165,7 +166,7 @@ export const useGameStore = defineStore('game', {
             };
 
             //02. If a checkpoint was stored, validate it and load it. Delete if invalid. Redownload if on-chain.
-            if (false && storedCheckpoint != null) {
+            if (storedCheckpoint != null) {
                 try {
                     let storedCheckpointHash = this.getCheckpointHash(storedCheckpoint.data);
 
@@ -234,11 +235,10 @@ export const useGameStore = defineStore('game', {
 
                     try {
                         //Verify the hash
-                        let turn_as_array_of_felts = [
+                        let hashedTurn = ec.starkCurve.pedersen(
                             BigInt(storedTurns[i].turn.turn),
                             BigInt(storedTurns[i].turn.action)
-                        ];
-                        let hashedTurn = hash.computeHashOnElements(turn_as_array_of_felts);
+                        );
 
                         if (storedTurns[i].hash != hashedTurn) {
                             throw new Error(`Wrong hash for turn #${storedTurns[i].turn.turn}`);
@@ -709,6 +709,7 @@ export const useGameStore = defineStore('game', {
 
         playTurn() {
             console.log("game: playTurn()");
+
             let turn_to_play = BigInt(this.currentState.turn);
             let player_number = this.playerNumberFromTurn(turn_to_play);
 
@@ -761,11 +762,10 @@ export const useGameStore = defineStore('game', {
                 return this.gameError("No keys or current state found when signing turn");
             }
 
-            let turn_as_array_of_felts = [
+            let hashedTurn = ec.starkCurve.pedersen(
                 turn,
                 action
-            ];
-            let hashedTurn = hash.computeHashOnElements(turn_as_array_of_felts);
+            );
             let signedTurn = ec.starkCurve.sign(hashedTurn, this.keys.privateKey);
 
             return {
@@ -790,15 +790,32 @@ export const useGameStore = defineStore('game', {
 
             new_state = this.state_transition(new_state, action);
 
-            this.currentState = new_state;
+            if (new_state == null) {
+                this.internalStatus = INTERNAL_STATUS.FINISHED;
 
-            console.log(`  - NEW currentState TURN: ${this.currentState.turn}`);
+            } else {
+                if (new_state.score_0 != this.currentState.score_0 || new_state.score_1 != this.currentState.score_1) {
+                    this.pauseBeforeNextTurn = true;
+                }
+
+                this.currentState = new_state;
+                console.log(`  - NEW currentState TURN: ${this.currentState.turn}`);
+            }
 
             //Check if this current state needs to be checkpointed
             if (this.internalStatus == INTERNAL_STATUS.PLAYING) {
                 if ((BigInt(new_state.turn) > OVERSHOOT)) {
                     let turn_to_check = BigInt(new_state.turn) - OVERSHOOT;
 
+                    if (turn_to_check % CHECKPOINT_DISTANCE == 0n) {
+                        if ((BigInt(_gameRooomStore.myPlayerNumber) * CHECKPOINT_DISTANCE) == (turn_to_check % (2n * CHECKPOINT_DISTANCE))) {
+                            this.createPartialCheckpoint(turn_to_check);
+                        }
+                    }
+                }
+            } else if (this.internalStatus == INTERNAL_STATUS.FINISHED) {
+                let turn_to_check = BigInt(this.currentState.turn) - 2n;
+                if (BigInt(this.checkpoint.data.turn) < turn_to_check) {
                     if (turn_to_check % CHECKPOINT_DISTANCE == 0n) {
                         if ((BigInt(_gameRooomStore.myPlayerNumber) * CHECKPOINT_DISTANCE) == (turn_to_check % (2n * CHECKPOINT_DISTANCE))) {
                             this.createPartialCheckpoint(turn_to_check);
@@ -814,10 +831,24 @@ export const useGameStore = defineStore('game', {
             console.log(`game: state_transition(${state}, ${action})`);
             //TODO: STATE TRANSITION FUNCTION
             const SPEED = 100n;
+            const MAX_SPEED = 80n;
             const MAX_Y = 12000n;
             const MAX_X = 16000n;
             const PADDLE_HEIGHT = 400n;
+            const WINNING_SCORE = 3n;
 
+            //Check if there was a winner
+            if (BigInt(state.score_0) >= WINNING_SCORE || BigInt(state.score_1) >= WINNING_SCORE) {
+                return null;
+            }
+
+            if (BigInt(state.ball.speed_x) == 0n || BigInt(state.ball.speed_y) == 0n) {
+                let randomized = this.randomize_ball(BigInt(state.turn));
+                state.ball.speed_x = randomized[0].toString();
+                state.ball.speed_y = randomized[1].toString();
+            }
+
+            //Get the player number for the action
             let playerNumber = this.playerNumberFromTurn(BigInt(state.turn));
             if (playerNumber == 0n) {
                 //Calculate the new speed and direction
@@ -879,13 +910,6 @@ export const useGameStore = defineStore('game', {
                 }
             }
 
-            if (BigInt(state.ball.speed_x) == 0n && BigInt(state.ball.speed_y == 0n)) {
-                //The ball is not moving, so we need to set it in motion
-                state.ball.speed_x = SPEED.toString();
-                state.ball.moving_left = true;
-                state.ball.speed_y = SPEED.toString();
-            }
-
             //Calculate the ball position
             if (state.ball.moving_up) {
                 let MIN_VALUE = BigInt(state.ball.size) / 2n;
@@ -909,15 +933,17 @@ export const useGameStore = defineStore('game', {
 
             let has_scored_0 = false;
             let has_scored_1 = false;
+            let ball_lower_limit = BigInt(state.ball.y) + (BigInt(state.ball.size) / 2n);
+            let ball_upper_limit = BigInt(state.ball.y) - (BigInt(state.ball.size) / 2n);
+            let paddle_0_lower_limit = BigInt(state.paddle_0.y) + (BigInt(state.paddle_0.size) / 2n);
+            let paddle_0_upper_limit = BigInt(state.paddle_0.y) - (BigInt(state.paddle_0.size) / 2n);
+            let paddle_1_lower_limit = BigInt(state.paddle_1.y) + (BigInt(state.paddle_1.size) / 2n);
+            let paddle_1_upper_limit = BigInt(state.paddle_1.y) - (BigInt(state.paddle_1.size) / 2n);
 
             if (state.ball.moving_left) {
-                let ball_lower_limit = BigInt(state.ball.y) + (BigInt(state.ball.size) / 2n);
-                let ball_upper_limit = BigInt(state.ball.y) - (BigInt(state.ball.size) / 2n);
-                let paddle_lower_limit = BigInt(state.paddle_0.y) + (BigInt(state.paddle_0.size) / 2n);
-                let paddle_upper_limit = BigInt(state.paddle_0.y) - (BigInt(state.paddle_0.size) / 2n);
-                let will_bounce = (ball_lower_limit >= paddle_upper_limit) && (ball_upper_limit <= paddle_lower_limit);
-
+                let will_bounce = (ball_lower_limit >= paddle_0_upper_limit) && (ball_upper_limit <= paddle_0_lower_limit);
                 let MIN_VALUE = PADDLE_HEIGHT + (BigInt(state.ball.size) / 2n);
+
                 if (BigInt(state.ball.x) < MIN_VALUE) {
                     //The ball has already crossed the paddle limit and will score the goal on time
                     if (BigInt(state.ball.speed_x) >= BigInt(state.ball.x)) {
@@ -934,19 +960,47 @@ export const useGameStore = defineStore('game', {
                     if (BigInt(state.ball.speed_x) >= (BigInt(state.ball.x))) {
                         //The ball will reach the screen limit in this turn, but it can still bounce
                         if (will_bounce) {
-                            state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                            state.ball.x = (MIN_VALUE + BigInt(state.ball.speed_x) - distance).toString();
                             state.ball.moving_left = false;
+
+                            //Calculate the new speed and direction
+                            let hit_distance = 0n;
+                            if (BigInt(state.ball.y) > BigInt(state.paddle_0.y)) {
+                                state.ball.moving_up = false;
+                                hit_distance = BigInt(state.ball.y) - BigInt(state.paddle_0.y);
+                            } else {
+                                state.ball.moving_up = true;
+                                hit_distance = BigInt(state.paddle_0.y) - BigInt(state.ball.y);
+                            }
+
+                            let hit_percentage = 50n + ((hit_distance * 50n) / (BigInt(state.paddle_0.size) / 2n));
+                            state.ball.speed_y = ((hit_percentage * BigInt(MAX_SPEED)) / 100n).toString();
+
                         } else {
                             //The ball will not bounce, so the ball will reach 0. Change score.
                             state.score_1 = (BigInt(state.score_1) + 1n).toString();
                             has_scored_1 = true;
                         }
                     } else {
-                        if ((BigInt(state.ball.x) - BigInt(state.ball.speed)) < MIN_VALUE) {
+                        if ((BigInt(state.ball.x) - BigInt(state.ball.speed_x)) < MIN_VALUE) {
                             //The ball will cross the paddle limit in this turn, but it can still bounce
                             if (will_bounce) {
-                                state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                                state.ball.x = (MIN_VALUE + BigInt(state.ball.speed_x) - distance).toString();
                                 state.ball.moving_left = false;
+
+                                //Calculate the new speed and direction
+                                let hit_distance = 0n;
+                                if (BigInt(state.ball.y) > BigInt(state.paddle_0.y)) {
+                                    state.ball.moving_up = false;
+                                    hit_distance = BigInt(state.ball.y) - BigInt(state.paddle_0.y);
+                                } else {
+                                    state.ball.moving_up = true;
+                                    hit_distance = BigInt(state.paddle_0.y) - BigInt(state.ball.y);
+                                }
+
+                                let hit_percentage = 50n + ((hit_distance * 50n) / (BigInt(state.paddle_0.size) / 2n));
+                                state.ball.speed_y = ((hit_percentage * BigInt(MAX_SPEED)) / 100n).toString();
+
                             } else {
                                 //The ball will not bounce, but won't reach 0 yet. Continue moving.
                                 state.ball.x = (BigInt(state.ball.x) - BigInt(state.ball.speed_x)).toString();
@@ -958,7 +1012,9 @@ export const useGameStore = defineStore('game', {
                     }
                 }
             } else {
+                let will_bounce = (ball_lower_limit >= paddle_1_upper_limit) && (ball_upper_limit <= paddle_1_lower_limit);
                 let MAX_VALUE = MAX_X - PADDLE_HEIGHT - (BigInt(state.ball.size) / 2n);
+
                 if (BigInt(state.ball.x) > MAX_VALUE) {
                     //The ball has already crossed the paddle limit and will score the goal on time
                     if (BigInt(state.ball.speed_x) >= (MAX_X - BigInt(state.ball.x))) {
@@ -975,19 +1031,47 @@ export const useGameStore = defineStore('game', {
                     if (BigInt(state.ball.speed_x) >= (MAX_X - BigInt(state.ball.x))) {
                         //The ball will reach the screen limit in this turn, but it can still bounce
                         if (will_bounce) {
-                            state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                            state.ball.x = (MAX_VALUE - (BigInt(state.ball.speed_x) - distance)).toString();
                             state.ball.moving_left = true;
+
+                            //Calculate the new speed and direction
+                            let hit_distance = 0n;
+                            if (BigInt(state.ball.y) > BigInt(state.paddle_0.y)) {
+                                state.ball.moving_up = true;
+                                hit_distance = BigInt(state.ball.y) - BigInt(state.paddle_1.y);
+                            } else {
+                                state.ball.moving_up = false;
+                                hit_distance = BigInt(state.paddle_1.y) - BigInt(state.ball.y);
+                            }
+
+                            let hit_percentage = 50n + ((hit_distance * 50n) / (BigInt(state.paddle_0.size) / 2n));
+                            state.ball.speed_y = ((hit_percentage * BigInt(MAX_SPEED)) / 100n).toString();
+
                         } else {
                             //The ball will not bounce, so the ball will reach 0. Change score.
                             state.score_0 = (BigInt(state.score_0) + 1n).toString();
                             has_scored_0 = true;
                         }
                     } else {
-                        if ((BigInt(state.ball.x) + BigInt(state.ball.speed)) > MAX_VALUE) {
+                        if ((BigInt(state.ball.x) + BigInt(state.ball.speed_x)) > MAX_VALUE) {
                             //The ball will cross the paddle limit in this turn, but it can still bounce
                             if (will_bounce) {
-                                state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                                state.ball.x = (MAX_VALUE - (BigInt(state.ball.speed_x) - distance)).toString();
                                 state.ball.moving_left = true;
+
+                                //Calculate the new speed and direction
+                                let hit_distance = 0n;
+                                if (BigInt(state.ball.y) > BigInt(state.paddle_0.y)) {
+                                    state.ball.moving_up = true;
+                                    hit_distance = BigInt(state.ball.y) - BigInt(state.paddle_1.y);
+                                } else {
+                                    state.ball.moving_up = false;
+                                    hit_distance = BigInt(state.paddle_1.y) - BigInt(state.ball.y);
+                                }
+
+                                let hit_percentage = 50n + ((hit_distance * 50n) / (BigInt(state.paddle_0.size) / 2n));
+                                state.ball.speed_y = ((hit_percentage * BigInt(MAX_SPEED)) / 100n).toString();
+
                             } else {
                                 //The ball will not bounce, but won't reach 0 yet. Continue moving.
                                 state.ball.x = (BigInt(state.ball.x) + BigInt(state.ball.speed_x)).toString();
@@ -1000,24 +1084,45 @@ export const useGameStore = defineStore('game', {
                 }
             }
 
-            if (has_scored_0 || has_scored_1) {
-                state.ball.x = (MAX_X / 2n).toString();
-                state.ball.y = (MAX_Y / 2n).toString();
-                state.ball.speed_x = SPEED.toString();
-                state.ball.speed_y = SPEED.toString();
-            }
-            if (has_scored_0) {
-                state.ball.moving_left = false;
-            } else {
-                state.ball.moving_left = true;
+            //If the game continues
+            if (BigInt(state.score_0) < WINNING_SCORE && BigInt(state.score_1) < WINNING_SCORE) {
+                //Reset the ball in case of score
+                if (has_scored_0 || has_scored_1) {
+                    state.ball.x = (MAX_X / 2n).toString();
+                    state.ball.y = (MAX_Y / 2n).toString();
+
+                    let randomized = this.randomize_ball(BigInt(state.turn));
+                    state.ball.speed_x = randomized[0].toString();
+                    state.ball.speed_y = randomized[1].toString();
+                    state.ball.moving_up = randomized[2];
+
+                    if (has_scored_0) {
+                        state.ball.moving_left = false;
+                    } else {
+                        state.ball.moving_left = true;
+                    }
+                }
             }
 
             state.turn = (BigInt(state.turn) + 1n).toString();
             return state;
         },
 
-        randomize_ball_velocity(turn) {
+        randomize_ball(turn) {
+            const BASE_SPEED = 30n;
+            /*
+            const MAX_SPEED = 160n;
+            let random_seed = _gameRooomStore.get_random_seed();
+            let hash_of_turn = ec.starkCurve.pedersen(random_seed, turn);
+            let random_x = BASE_SPEED + (BigInt(ec.starkCurve.pedersen(hash_of_turn, 0n)) % (MAX_SPEED - BASE_SPEED));
+            let random_y = BASE_SPEED + (BigInt(ec.starkCurve.pedersen(hash_of_turn, 1n)) % (MAX_SPEED - BASE_SPEED));
+            let random_moving_left = BigInt(ec.starkCurve.pedersen(hash_of_turn, 2n)) % 2n == 1n;
+            let random_moving_up = BigInt(ec.starkCurve.pedersen(hash_of_turn, 3n)) % 2n == 1n;
+            */
+            //SMART CONTRACT CURRENTLY CANNOT REPLICATE THIS, USE SIMPLE ALTERNATICVE
 
+            let moving_up = (turn % 2n) == 1n;
+            return [BASE_SPEED, BASE_SPEED, moving_up, false];
         },
 
         processTurn(turn) {
@@ -1034,11 +1139,10 @@ export const useGameStore = defineStore('game', {
             }
 
             //Verify the hash
-            let turn_as_array_of_felts = [
+            let hashedTurn = ec.starkCurve.pedersen(
                 BigInt(turn.turn.turn),
                 BigInt(turn.turn.action)
-            ];
-            let hashedTurn = hash.computeHashOnElements(turn_as_array_of_felts);
+            );
 
             if (turn.hash != hashedTurn) {
                 console.error(`Wrong hash for turn #${turn.turn.turn}`);
@@ -1318,11 +1422,8 @@ export const useGameStore = defineStore('game', {
             manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[15]));
             manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[16]));
             manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[17]));
-        
-            console.log(manual_hash);
-            console.log(hash.computeHashOnElements(state_as_array_of_felts));
 
-            return manual_hash; //hash.computeHashOnElements(state_as_array_of_felts);
+            return manual_hash;
         },
 
         showPartialExit() {

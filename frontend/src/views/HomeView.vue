@@ -23,7 +23,7 @@ const gameRoomFactoryStore = useGameRoomFactoryStore();
             </div>
             <div v-else-if="gameRoomStore.currentGameRoom != null" class="flex column section">
                 <div class="button big-button" @click="gameRoomStore.redirectFromStatus(true)" v-if="gameRoomStore.status != GAME_STATUS.PARTIAL_EXIT">CONTINUE GAME</div>
-                <div class="button big-button" @click="gameRoomStore.partialExit()">EXIT GAME</div>
+                <!--div class="button big-button" @click="gameRoomStore.partialExit()">EXIT GAME</div-->
             </div>
             <div v-else-if="gameRoomFactoryStore.lastGameRoom != null">
                 <div class="button big-button" @click="gameRoomFactoryStore.exitLastGameRoom()">EXIT UNFINISHED GAME</div>

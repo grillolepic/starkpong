@@ -23,7 +23,7 @@ mod GameRoom {
     use stark_pong::utils::player::{Player, StorageAccessPlayerImpl};
     use stark_pong::utils::game_room_status::{GameRoomStatus, StorageAccessGameRoomStatusImpl};
     use stark_pong::utils::signature::{Signature};
-    use stark_pong::game::{initial_game_state, player_number_from_turn};
+    use stark_pong::game::{initial_game_state, player_number_from_turn, MAX_SCORE};
     use stark_pong::game::game_components::objects::{Paddle, Ball};
     use stark_pong::game::game_components::state::{
         GameState, GameStateTrait, Checkpoint, CheckpointTrait
@@ -43,7 +43,8 @@ mod GameRoom {
         _wager: u256,
         _fee: u128,
         _state: GameState,
-        _optimal_predictable_result: bool
+        _optimal_predictable_result: bool,
+        _exit_player_number: u8
     }
 
     impl GameRoomImpl of IGameRoom {
@@ -101,6 +102,7 @@ mod GameRoom {
 
         _state::write(initial_game_state(random_seed));
         _optimal_predictable_result::write(false);
+        _exit_player_number::write(0_u8);
     }
 
     //***********************************************************//
@@ -261,6 +263,14 @@ mod GameRoom {
     }
 
     #[external]
+    fn exit_unplayed() {
+        assert_deadline();
+        assert_player(Option::None(()));
+        assert_status(GameRoomStatus::InProgress(()));
+        _partial_exit(false);
+    }
+
+    #[external]
     fn exit_with_partial_result(
         checkpoint: Checkpoint, mut turns: Array<TurnAction>, use_optimal_predictable_result: bool
     ) {
@@ -330,6 +340,7 @@ mod GameRoom {
 
     fn _advance_game_state(mut turns: Array<TurnAction>) {
         let mut new_game_state = _state::read();
+        let random_seed = _random_seed::read();
 
         loop {
             match turns.pop_front() {
@@ -346,7 +357,7 @@ mod GameRoom {
                             'INVALID_TURN_ACTION'
                         );
 
-                        new_game_state = new_game_state.apply_turn(turn_action);
+                        new_game_state = new_game_state.apply_turn(turn_action, random_seed);
 
                         if (new_game_state.winner().is_some()) {
                             break ();
@@ -372,37 +383,27 @@ mod GameRoom {
     }
 
     fn _partial_exit(use_optimal_predictable_result: bool) {
-        //The last played signed turn to update the state must be by the player calling for the exit
-
-        //TODO SAVE THE EXIT_PLAYER_NUMBER and make an exception to rule enforcement when exiting on turn 0
-
-        let last_turn = _state::read().turn;
-        let player_number = _get_caller_player_number().unwrap();
-        let player_number_from_state_turn = player_number_from_turn(last_turn);
-        assert(player_number == player_number_from_state_turn, 'INVALID_TURN_FOR_EXIT');
-
         _optimal_predictable_result::write(use_optimal_predictable_result);
+        _exit_player_number::write(_get_caller_player_number().unwrap());
+
         _status::write(GameRoomStatus::PartialExit(()));
 
         _set_deadline(60_u64);
-        PartialExit(last_turn);
+        PartialExit(_state::read().turn);
     }
 
     fn _dispute_partial_result(evidence: TurnAction) {
-
-        //TODO use the new EXIT_PLAYER_NUMBER and make an exception to rule enforcement when exiting on turn 0
-
         //Disputing a result requires a signed turn from the Player who exited the game,
         //which is higher than the last turn saved to the game state
-        let exited_player_number = player_number_from_turn(_state::read().turn);
+        let exited_player_number = _exit_player_number::read();
         let exited_player = _players::read(exited_player_number);
         assert(
             evidence.verify_signature(exited_player.offchain_public_key),
             'INVALID_EVIDENCE_SIGNATURE'
         );
-        assert(evidence.turn > _state::read().turn, 'INVALID_EVIDENCE_TURN');
+        assert(evidence.turn >= _state::read().turn, 'INVALID_EVIDENCE_TURN');
 
-        //No matter the result, if a player disputes a results, that player receives the prize
+        //No matter the result, if a player successfully disputes a result, that player receives the full prize
         _pay_prize_and_fees(_get_caller_player_number());
 
         _status::write(GameRoomStatus::Finished(()));
@@ -416,6 +417,8 @@ mod GameRoom {
             _state::write(optimal_predictable_result);
         }
 
+        //winner is only one of the players is the MAX_SCORE is reached
+        //if not, it is none
         let winner = _state::read().winner();
         _pay_prize_and_fees(winner);
 
@@ -541,10 +544,16 @@ mod GameRoom {
     }
 
     fn _pay_prize_and_fees(player_number: Option<u8>) {
+        //This function receives the player number of a winner if:
+        // - The game is really over, and there is a winner
+        // - A partial result was successfully disputed
+        // - A partial result was completed with optimalresult and there's a player with MAX_SCORE
 
-        //NEW LOGIC FOR PARTIAL WIN:
-        //Exponentially increasing reward for the player who won the game
-        //Remaining goes to the factory contract
+        //Player is otherwise None, even in cases where there's a clear winner
+        // - A 2-0 partial exit for example, will have a winner None
+
+        //The game incentivizes complete games by always taking away the full wager
+        //from the losing player, but only giving the complete prize to a full winner.
 
         if (_wager::read() > 0_u256) {
             let contract_address = get_contract_address();
@@ -562,31 +571,94 @@ mod GameRoom {
                 / 10000_u128
                 * fee.try_into().unwrap();
             let fees_to_factory_contract_252: felt252 = fees_to_factory_contract_128.into();
-            let fees_to_factory_contract: u256 = fees_to_factory_contract_252.into();
 
-            let payment_to_winner: u256 = total_balance - fees_to_factory_contract;
-            let payment_to_winner_252: felt252 = payment_to_winner.try_into().unwrap();
-            let payment_to_winner_128: u128 = payment_to_winner_252.try_into().unwrap();
-            let payment_to_winner_half: u128 = payment_to_winner_128 / 2_u128;
-            let payment_to_winner_half_252: felt252 = payment_to_winner_half.into();
-            let payment_to_winner_half: u256 = payment_to_winner_half_252.into();
+            let mut fees_to_factory_contract: u256 = fees_to_factory_contract_252.into();
+            let mut total_prize: u256 = total_balance - fees_to_factory_contract;
 
             match player_number {
                 Option::Some(winner) => {
+                    //A FULL winner receives the total prize
                     assert(
-                        game_token.transfer(_players::read(winner).address, payment_to_winner),
+                        game_token.transfer(_players::read(winner).address, total_prize),
                         'PRIZE_TRANSFER_FAILED'
                     );
                 },
                 Option::None(()) => {
-                    assert(
-                        game_token.transfer(_players::read(0_u8).address, payment_to_winner_half),
-                        'REFUND_FAILED'
-                    );
-                    assert(
-                        game_token.transfer(_players::read(1_u8).address, payment_to_winner_half),
-                        'REFUND_FAILED'
-                    );
+                    //No score can be MAX_SCORE, or we would have a winner
+                    let player_0_score = _state::read().score_0;
+                    let player_1_score = _state::read().score_0;
+
+                    let player_0_score_252: felt252 = player_0_score.into();
+                    let player_0_score_128: u128 = player_0_score_252.try_into().unwrap();
+                    let player_1_score_252: felt252 = player_1_score.into();
+                    let player_1_score_128: u128 = player_1_score_252.try_into().unwrap();
+
+                    //Reduce the prize according to the maximum score
+                    let total_prize_252: felt252 = total_prize.try_into().unwrap();
+                    let total_prize_128: u128 = total_prize_252.try_into().unwrap();
+
+                    //The remaining tokens will go to factory contract
+                    let MAX_SCORE_252: felt252 = MAX_SCORE.into();
+                    let MAX_SCORE_128: u128 = MAX_SCORE_252.try_into().unwrap();
+
+                    let mut new_total_prize_128 = 0_u128;
+
+                    if (player_0_score == player_1_score) {
+                        new_total_prize_128 = total_prize_128
+                            / (MAX_SCORE_128 - player_0_score_128);
+                    //33% of the total prize for 0-0 (16.6% each: both at a loss)
+                    //66% of the total prize for 1-1 (33% each: both at a loss)
+                    //100% of the total prize for 2-2 (50% each: both at a very small loss (just the fees))
+
+                    } else {
+                        let point_diff = if (player_0_score > player_1_score) {
+                            (player_0_score - player_1_score) - 1_u8
+                        } else {
+                            (player_1_score - player_1_score) - 1_u8
+                        };
+
+                        let point_diff_252: felt252 = point_diff.into();
+                        let point_diff_128: u128 = point_diff_252.try_into().unwrap();
+                        new_total_prize_128 = total_prize_128 / (MAX_SCORE_128 - point_diff_128);
+                    //33% of the total prize for 1-0, 2-1 (winner loses a small part, loser loses all)
+                    //66% of the total prize for 2-0 (winner makes a small profit, loser loses all)
+                    }
+
+                    //What doesn't go to the player is added to the factory fees
+                    let new_total_prize_252: felt252 = new_total_prize_128.into();
+                    let new_total_prize_256: u256 = new_total_prize_252.into();
+
+                    let penalty_for_factory: u128 = total_prize_128 - new_total_prize_128;
+                    let penalty_for_factory_252: felt252 = penalty_for_factory.into();
+                    fees_to_factory_contract += penalty_for_factory_252.into();
+
+                    if (player_0_score == player_1_score) {
+                        //Split in half for each player
+                        let half_prize_128: u128 = new_total_prize_128 / 2_u128;
+                        let half_prize_252: felt252 = half_prize_128.into();
+                        let half_prize: u256 = half_prize_252.into();
+
+                        assert(
+                            game_token.transfer(_players::read(0_u8).address, half_prize),
+                            'REFUND_FAILED'
+                        );
+                        assert(
+                            game_token.transfer(_players::read(1_u8).address, half_prize),
+                            'REFUND_FAILED'
+                        );
+                    } else if (player_0_score > player_1_score) {
+                        //Player 0 wins partial victory
+                        assert(
+                            game_token.transfer(_players::read(0_u8).address, new_total_prize_256),
+                            'REFUND_FAILED'
+                        );
+                    } else {
+                        //Player 1 wins partial victory
+                        assert(
+                            game_token.transfer(_players::read(1_u8).address, new_total_prize_256),
+                            'REFUND_FAILED'
+                        );
+                    }
                 }
             }
 

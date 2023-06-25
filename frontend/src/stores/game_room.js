@@ -21,6 +21,7 @@ let _initialState = {
     deadline: null,
     past_deadline: null,
     wager: null,
+    random_seed: null,
 
     error: null
 }
@@ -96,6 +97,7 @@ export const useGameRoomStore = defineStore('game_room', {
                 }
 
                 let wager = await _gameRoomContract.wager();
+                let random_seed_response = await _gameRoomContract.random_seed();
 
                 this.$patch({
                     status: status,
@@ -103,7 +105,8 @@ export const useGameRoomStore = defineStore('game_room', {
                     past_deadline: past_deadline,
                     player_0: player_0_response,
                     player_1: player_1_response,
-                    wager: wager
+                    wager: wager,
+                    random_seed: random_seed_response
                 });
 
                 //Obtain the saved private key
@@ -165,6 +168,9 @@ export const useGameRoomStore = defineStore('game_room', {
             let paddle_0 = await _gameRoomContract.paddle(0);
             let paddle_1 = await _gameRoomContract.paddle(1);
             let ball = await _gameRoomContract.ball();
+
+            console.log("!!!");
+            console.log(ball);
 
             return {
                 turn: bigint_to_string ? gameState["0"].toString() : gameState["0"],

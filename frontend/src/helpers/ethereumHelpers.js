@@ -9,7 +9,6 @@ function parseEther(amount) {
 
 function formatEther(amount) {
   let bn = amount.toString();
-  console.log(bn);
   let currentStr = ''
   if (bn.length > 18) {
     let extraZeros = bn.length - 18
