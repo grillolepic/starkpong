@@ -64,10 +64,14 @@ export const useGameRoomStore = defineStore('game_room', {
             try {
                 _gameRoomContract = new Contract(GAME_ROOM_ABI, game_room_address, _starknetStore.account);
 
+                console.log("_gameRoomContract", _gameRoomContract);
+
                 let status_response = await _gameRoomContract.status();
                 let status = status_response["0"];
                 let deadline = Number(status_response["1"]);
                 let past_deadline = (deadline <= Math.floor(Date.now() / 1000));
+
+                console.log("_gameRoomContract", _gameRoomContract);
 
                 if (past_deadline) {
                     if (status == GAME_STATUS.WAITING_FOR_PLAYERS || status == GAME_STATUS.IN_PROGRESS || status == GAME_STATUS.PARTIAL_EXIT) {
@@ -76,6 +80,8 @@ export const useGameRoomStore = defineStore('game_room', {
                 } else if (status == GAME_STATUS.FINISHED || status == GAME_STATUS.CLOSED) {
                     this.reset(true);
                 }
+                
+                console.log("_gameRoomContract", _gameRoomContract);
 
                 let player_0_response = await _gameRoomContract.player(0);
                 let player_1_response = await _gameRoomContract.player(1);

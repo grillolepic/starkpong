@@ -34,7 +34,7 @@ let _initialState = {
   chainId: null,
   networkName: null,
   networkOk: false,
-  balance: 0n,
+  balance: "0",
 
   transaction: {
     status: null,
@@ -72,7 +72,7 @@ export const useStarknetStore = defineStore('starknet', {
     isStarknetConnected: () => (_starknet == null) ? false : _starknet.isConnected,
     isStarknetReady: (state) => (state.connected && state.networkOk),
     isTestnet: (state) => isTestnet(state.currentOrDefaultChainId),
-    balanceFormat: (state) => formatEther(state.balance),
+    balanceFormat: (state) => formatEther(BigInt(state.balance)),
     fixedMainnetProvider: () => _fixed_mainnet_provider
   },
 
@@ -156,11 +156,11 @@ export const useStarknetStore = defineStore('starknet', {
     async updateBalance() {
       console.log('starknet: updateBalance()');
       if (_starknet == null || _etherContract == null) {
-        return (this.balance = 0n);
+        return (this.balance = "0");
       }
 
       let response = await _etherContract.balanceOf(this.address);
-      this.balance = response;
+      this.balance = response.toString();
     },
 
     resetTransaction() {

@@ -14,10 +14,12 @@ let _trysteroRoom = null;
 let _sendMessage = null;
 let _getMessage = null;
 let _partialExitTimer = null;
+let _messageTimer = null;
 
-const TARGET_DISTANCE_BETWEEN_TURNS = 5000;
+const TARGET_DISTANCE_BETWEEN_TURNS = 33;
 const CHECKPOINT_DISTANCE = 50n;
 const OVERSHOOT = 4n;
+const TIME_FOR_PARTIAL_EXIT = 3 * 60 * 1000;
 
 let _initialState = {
     internalStatus: null,
@@ -33,15 +35,17 @@ let _initialState = {
     pauseBeforeNextTurn: true,
     paused: true,
 
-    currentAction: 1n,
+    keyUp: false,
+    keyDown: false,
+    currentAction: 1,
 
     gamePeers: []
 }
 
 export const ACTIONS = {
-    MOVE_UP: 0n,
-    NO_MOVE: 1n,
-    MOVE_DOWN: 2n
+    MOVE_UP: 0,
+    NO_MOVE: 1,
+    MOVE_DOWN: 2
 };
 
 export const INTERNAL_STATUS = {
@@ -111,7 +115,7 @@ export const useGameStore = defineStore('game', {
             return convertedState;
         },
         lastTurnSignature: (state) => {
-            if (state.turns.length == 0) return ['', ''];
+            if (state.turns.length == 0) return ['.', '.'];
             let last_turn = state.turns[state.turns.length - 1];
             return [
                 last_turn.signature.r,
@@ -119,7 +123,7 @@ export const useGameStore = defineStore('game', {
             ];
         },
         lastCheckpointSignature: (state) => {
-            if (state.checkpoint == null || state.checkpoint.on_chain) return ['', '', '', ''];
+            if (state.checkpoint == null || state.checkpoint.on_chain) return ['.', '.', '.', '.'];
             return [
                 state.checkpoint.signatures[0].r,
                 state.checkpoint.signatures[0].s,
@@ -163,9 +167,6 @@ export const useGameStore = defineStore('game', {
 
             //02. If a checkpoint was stored, validate it and load it. Delete if invalid. Redownload if on-chain.
             if (storedCheckpoint != null) {
-
-                console.log("I HAVE A CHECKPOINT:");
-                console.log(storedCheckpoint);
 
                 try {
                     let storedCheckpointHash = this.getCheckpointHash(storedCheckpoint.data);
@@ -214,9 +215,6 @@ export const useGameStore = defineStore('game', {
 
             //03. Now check if th blockchain state is not further into the game            
             await this.getCheckpointFromBlockchain();
-
-            console.log("NOW CHECKPOINT IS:");
-            console.log(this.checkpoint);
 
             //04. Now process the stored turns. Delete them if < checkpoint, (not sequential?) or if wrong signature.
             if (storedTurns.length > 0) {
@@ -284,18 +282,15 @@ export const useGameStore = defineStore('game', {
                 localStorage.setItem(_gameRoomFactoryStore.localKey, JSON.stringify(storedGameData));
             }
 
-            console.log("AND NOW, AFTER LOADING TURNS:");
-            console.log(this.checkpoint);
-
             //05. Recalculate the current state in case the checkpoint wasn't updated
             this.recalculateCurrentState();
-
-            console.log("AND FINALLY, BEFORE BEGINNING TO CONNECT:");
-            console.log(this.checkpoint);
 
             //06. Connect with other player via WebRTC and exchange signed ids before beginning sync
             if (this.currentState != null) {
                 this.internalStatus = INTERNAL_STATUS.CONNECTING_WITH_PLAYERS;
+
+                if (_partialExitTimer != null) { clearTimeout(_partialExitTimer); }
+                _partialExitTimer = setTimeout(() => this.showPartialExit(), TIME_FOR_PARTIAL_EXIT);
 
                 _trysteroRoom = joinRoom({ appId: gameRoomFactoryAddress[_starknetStore.chainId] }, _gameRooomStore.currentGameRoom);
                 [_sendMessage, _getMessage] = _trysteroRoom.makeAction('message');
@@ -307,9 +302,8 @@ export const useGameStore = defineStore('game', {
                         console.log(` > Player #${this.gamePeers[peerId].playerNumber} (${this.gamePeers[peerId].address}) left the game`);
                         delete this.gamePeers[peerId];
                         this.internalStatus = INTERNAL_STATUS.CONNECTING_WITH_PLAYERS;
-
-                        //TODO: Start a timer to offer partial exit
-                        _partialExitTimer = setTimeout(() => this.showPartialExit(), 60 * 1000);
+                        if (_partialExitTimer != null) { clearTimeout(_partialExitTimer); }
+                        _partialExitTimer = setTimeout(() => this.showPartialExit(), TIME_FOR_PARTIAL_EXIT);
 
                     }
                 });
@@ -430,6 +424,7 @@ export const useGameStore = defineStore('game', {
                                 }
 
                                 setTimeout(() => this.sendSync(), 1000);
+                                _partialExitTimer = setTimeout(() => this.showPartialExit(), TIME_FOR_PARTIAL_EXIT);
 
                                 this.sendIdToPeers();
 
@@ -441,9 +436,6 @@ export const useGameStore = defineStore('game', {
                 }
             } else if (message.type == MESSAGE_TYPE.SYNC && this.internalStatus > INTERNAL_STATUS.CONNECTING_WITH_PLAYERS && peerId in this.gamePeers) {
 
-                console.log("RECEIVED MESSAGE:");
-                console.log(message);
-
                 const peerPlayerNumber = this.gamePeers[peerId].playerNumber;
 
                 try {
@@ -454,8 +446,6 @@ export const useGameStore = defineStore('game', {
 
                     const CHECKPOINT = JSON.parse(JSON.stringify(message.data.checkpoint));
                     const TURNS = [...message.data.turns];
-
-                    console.log(CHECKPOINT);
 
                     //01. First, check if the checkpoint hash is valid
                     let checkpointHash = this.getCheckpointHash(CHECKPOINT.data);
@@ -539,6 +529,8 @@ export const useGameStore = defineStore('game', {
                             await this.getCheckpointFromBlockchain();
                             if (this.checkpoint < CHECKPOINT.data.turn) {
                                 this.internalStatus = INTERNAL_STATUS.SYNCING;
+                                if (_partialExitTimer != null) { clearTimeout(_partialExitTimer); }
+                                _partialExitTimer = setTimeout(() => this.showPartialExit(), TIME_FOR_PARTIAL_EXIT);
                                 return _sendMessage({ type: MESSAGE_TYPE.SYNC_REQ, data: null });
                             }
                         }
@@ -556,31 +548,31 @@ export const useGameStore = defineStore('game', {
                                 // II. PARTIALLY SIGNED CHECKPOINT > LOCAL CHECKPOINT AND <= LOCAL LAST TURN
                                 if (BigInt(CHECKPOINT.data.turn) <= BigInt(this.currentState.turn)) {
 
-                                    //TODO: Verify that the checkpoint on that turn is correct
-                                    let is_valid = true;
+                                    let locallyCreatedCheckpoint = this.createPartialCheckpoint(BigInt(CHECKPOINT.data.turn), false);
+                                    let is_valid = (locallyCreatedCheckpoint.hash == CHECKPOINT.hash);
 
                                     if (is_valid) {
                                         //Sign the checkpoint hash
                                         let signature = ec.starkCurve.sign(checkpointHash, this.keys.privateKey);
 
-                                        CHECKPOINT.signatures[_gameRooomStore.myPlayerNumber] = {
-                                            r: signature.r.toString(),
-                                            s: signature.s.toString()
-                                        };
-
+                                        CHECKPOINT.signatures[_gameRooomStore.myPlayerNumber] =
+                                            { ... locallyCreatedCheckpoint.signatures[_gameRooomStore.myPlayerNumber] };
+                                        
                                         this.updateCheckpoint(CHECKPOINT);
 
                                         //Send the checkpoint with both signatures
                                         this.sendSync();
 
                                     } else {
-                                        //Send the correct checkpoit with only your signature
-                                        //TODO
+                                        console.error("Received checkpoint seems to be invalid!");
+                                        this.createPartialCheckpoint(BigInt(CHECKPOINT.data.turn));
                                     }
 
                                     // III. PARTIALLY SIGNED CHECKPOINT > LOCAL CHECKPOINT AND > LOCAL LAST TURN
                                 } else {
                                     this.internalStatus = INTERNAL_STATUS.SYNCING;
+                                    if (_partialExitTimer != null) { clearTimeout(_partialExitTimer); }
+                                    _partialExitTimer = setTimeout(() => this.showPartialExit(), TIME_FOR_PARTIAL_EXIT);
                                     return _sendMessage({ type: MESSAGE_TYPE.SYNC_REQ, data: null });
                                 }
                             }
@@ -596,23 +588,28 @@ export const useGameStore = defineStore('game', {
                 }
             } else if (this.internalStatus == INTERNAL_STATUS.SYNCING && message.type == MESSAGE_TYPE.SYNC_OK) {
 
-                console.log(this.checkpoint);
-
                 if (message.data == this.currentState.turn) {
                     _sendMessage({ type: MESSAGE_TYPE.SYNC_OK, data: this.currentState.turn });
                     this.internalStatus = INTERNAL_STATUS.PLAYING;
+
+                    //Stop the partial exit timer on syncing
+                    if (_partialExitTimer != null) {
+                        clearTimeout(_partialExitTimer);
+                        _partialExitTimer = null;
+                    }
+
                     setTimeout(() => {
                         this.playTurn();
                     }, 2000);
                 }
 
             } else if (message.type == MESSAGE_TYPE.TURN) {
-
-                console.log(this.checkpoint);
                 this.processTurn(message.data);
 
             } else if (message.type == MESSAGE_TYPE.SYNC_REQ) {
                 this.internalStatus = INTERNAL_STATUS.SYNCING;
+                if (_partialExitTimer != null) { clearTimeout(_partialExitTimer); }
+                _partialExitTimer = setTimeout(() => this.showPartialExit(), TIME_FOR_PARTIAL_EXIT);
                 this.sendSync();
             }
         },
@@ -633,6 +630,25 @@ export const useGameStore = defineStore('game', {
                     turns: [...this.turns]
                 }
             });
+        },
+
+        handleKeyDown(up) {
+            if (this.currentAction == ACTIONS.NO_MOVE) {
+                this.currentAction == (up)?ACTIONS.MOVE_UP:ACTIONS.MOVE_DOWN;
+            }
+            if (up) { this.keyUp = true; }
+            else { this.keyDown = true; }
+        },
+
+        handleKeyUp(up) {
+            if (up) { this.keyUp = false; }
+            else { this.keyDown = false; }
+
+            if (!this.keyUp && !this.keyDown) {
+                this.currentAction = ACTIONS.NO_MOVE;
+            } else {
+                this.currentAction = (this.keyUp)?ACTIONS.MOVE_UP:ACTIONS.MOVE_DOWN;
+            }
         },
 
         async getCheckpointFromBlockchain() {
@@ -660,7 +676,7 @@ export const useGameStore = defineStore('game', {
                 } else {
                     throw new Error("No local game data found");
                 }
-                
+
                 storedGameData.checkpoint = newCheckpoint;
                 this.checkpoint = JSON.parse(JSON.stringify(newCheckpoint));
 
@@ -692,7 +708,7 @@ export const useGameStore = defineStore('game', {
                 console.log(" > PAUSE FOR 5 SECONDS");
                 this.pauseBeforeNextTurn = false;
                 this.paused = true;
-                return setTimeout(this.playTurn, 5000);
+                return setTimeout(this.playTurn, 3000);
             }
 
             if (player_number == _gameRooomStore.myPlayerNumber) {
@@ -716,13 +732,13 @@ export const useGameStore = defineStore('game', {
                         } else {
                             let waitTime = TARGET_DISTANCE_BETWEEN_TURNS - distance;
                             console.log(`   > Waiting ${waitTime}ms before sending turn`);
-                            setTimeout(() => {
+                            _messageTimer = setTimeout(() => {
                                 _sendMessage({ type: MESSAGE_TYPE.TURN, data: signed_turn });
                                 this.lastTurnSent = Date.now();
                             }, waitTime);
                         }
                     } else {
-                        _sendMessage({ type: MESSAGE_TYPE.TURN, data: signed_turn });
+                        _messageTimer = _sendMessage({ type: MESSAGE_TYPE.TURN, data: signed_turn });
                         this.lastTurnSent = Date.now();
                     }
                 }
@@ -770,7 +786,7 @@ export const useGameStore = defineStore('game', {
 
             //Check if this current state needs to be checkpointed
             if (this.internalStatus == INTERNAL_STATUS.PLAYING) {
-                if ((BigInt(new_state.turn) > OVERSHOOT)){
+                if ((BigInt(new_state.turn) > OVERSHOOT)) {
                     let turn_to_check = BigInt(new_state.turn) - OVERSHOOT;
 
                     if (turn_to_check % CHECKPOINT_DISTANCE == 0n) {
@@ -787,6 +803,11 @@ export const useGameStore = defineStore('game', {
         state_transition(state, action) {
             console.log(`game: state_transition(${state}, ${action})`);
             //TODO: STATE TRANSITION FUNCTION
+
+
+
+
+
             state.turn = (BigInt(state.turn) + 1n).toString();
             return state;
         },
@@ -823,13 +844,13 @@ export const useGameStore = defineStore('game', {
             );
 
             let player_for_turn = this.playerNumberFromTurn(BigInt(turn.turn.turn));
-            
+
             let public_key = (player_for_turn == _gameRooomStore.myPlayerNumber) ? this.keys.publicKey : this.keys.opponentPublicKey;
             if (public_key == null || public_key == undefined) {
                 console.error("Missing public key for signature verification");
                 return;
             }
-            
+
             if (!(ec.starkCurve.verify(signature, hashedTurn, public_key))) {
                 console.error(`Invalid turn #${turn.turn.turn} signature`);
                 return;
@@ -883,8 +904,6 @@ export const useGameStore = defineStore('game', {
                     this.advance_state(this.playerNumberFromTurn(BigInt(turn.turn.turn)), BigInt(turn.turn.turn), BigInt(turn.turn.action));
                 }
             }
-
-            //TODO: REPLACE LOCAL STORAGE
         },
 
         addTurn(new_turn) {
@@ -931,8 +950,8 @@ export const useGameStore = defineStore('game', {
             localStorage.setItem(_gameRoomFactoryStore.localKey, JSON.stringify(storedGameData));
         },
 
-        createPartialCheckpoint(target_turn) {
-            console.log(`game: createPartialCheckpoint()`);
+        createPartialCheckpoint(target_turn, send_after = true) {
+            console.log(`game: createPartialCheckpoint(${target_turn})`);
 
             //Check if its really necessary to create a partial checkpoint
             if (BigInt(this.checkpoint.data.turn) >= target_turn) {
@@ -940,16 +959,11 @@ export const useGameStore = defineStore('game', {
                 return;
             }
 
-            console.log(`  - Creating partial checkpoint for turn #${target_turn}`);
-
             let new_data = JSON.parse(JSON.stringify(this.checkpoint.data));
-
-            console.log("INITIAL DATA:");
-            console.log(new_data);
 
             //Loop the turn until reaching the target turn
             this.turns.sort((a, b) => { return Number(BigInt(a.turn.turn) - BigInt(b.turn.turn)) });
-            for(let i=0; i<this.turns.length; i++) {
+            for (let i = 0; i < this.turns.length; i++) {
                 let TURN = this.turns[i];
                 if (BigInt(TURN.turn.turn) >= target_turn) {
                     break;
@@ -973,9 +987,6 @@ export const useGameStore = defineStore('game', {
                 signatures: [null, null]
             };
 
-            console.log("CREATED A NEW PARTIAL CHECKPOINT:");
-            console.log(new_checkpoint);
-
             //Calculate the hash of the state
             let state_hash = this.getCheckpointHash(JSON.parse(JSON.stringify(new_data)));
             new_checkpoint.hash = state_hash;
@@ -988,24 +999,26 @@ export const useGameStore = defineStore('game', {
                 s: '0x' + signedCheckpoint.s.toString(16)
             };
 
-            console.log("FINISHED CREATING A NEW PARTIAL CHECKPOINT:");
-            console.log(new_checkpoint);
-
             //Double check that this checkpoint is > older checkpoint
-            if (BigInt(new_checkpoint.data.turn) > BigInt(this.checkpoint.data.turn)) {
-                _sendMessage({
-                    type: MESSAGE_TYPE.SYNC,
-                    data: {
-                        checkpoint: new_checkpoint,
-                        turns: []
-                    }
-                });
+            if (send_after) {
+                if (BigInt(new_checkpoint.data.turn) > BigInt(this.checkpoint.data.turn)) {
+                    _sendMessage({
+                        type: MESSAGE_TYPE.SYNC,
+                        data: {
+                            checkpoint: new_checkpoint,
+                            turns: []
+                        }
+                    });
+                }
             }
+
+            return new_checkpoint;
         },
 
         updateCheckpoint(checkpoint) {
             console.log(`game: getCheckpointFromBlockchain()`);
             //Update the localStorage checpoint and this.checkpoint
+            //Alos deletes old turns from localStorage and this.turns
             //DOES NOT CHECK SIGNATURES!
 
             if (BigInt(checkpoint.data.turn) >= BigInt(this.checkpoint.data.turn)) {
@@ -1019,6 +1032,29 @@ export const useGameStore = defineStore('game', {
                 this.checkpoint = JSON.parse(JSON.stringify(checkpoint));
                 storedGameData.checkpoint = JSON.parse(JSON.stringify(checkpoint));
 
+                //Delete turns that are older than the checkpoint (in localStorage)
+                let turns_to_delete = [];
+                for (let i = 0; i < storedGameData.turns.length; i++) {
+                    if (BigInt(storedGameData.turns[i].turn.turn) < BigInt(checkpoint.data.turn)) {
+                        turns_to_delete.push(i);
+                    }
+                }
+                for (let i = turns_to_delete.length - 1; i >= 0; i--) {
+                    storedGameData.turns.splice(turns_to_delete[i], 1);
+                }
+
+                //Delete turns that are older than the checkpoint (in this.turns)
+                turns_to_delete = [];
+                for (let i = 0; i < this.turns.length; i++) {
+                    if (BigInt(this.turns[i].turn.turn) < BigInt(checkpoint.data.turn)) {
+                        turns_to_delete.push(i);
+                    }
+                }
+                for (let i = turns_to_delete.length - 1; i >= 0; i--) {
+                    this.turns.splice(turns_to_delete[i], 1);
+                }
+
+                //Save the new checkpoint and turns to localStorage
                 localStorage.setItem(_gameRoomFactoryStore.localKey, JSON.stringify(storedGameData));
 
                 this.recalculateCurrentState();
@@ -1085,6 +1121,10 @@ export const useGameStore = defineStore('game', {
             }
             _sendMessage = null;
             _getMessage = null;
+            if (_messageTimer != null) {
+                clearTimeout(_messageTimer);
+                _messageTimer = null;
+            }
         }
     }
 });

@@ -19,7 +19,7 @@ let _gameTokenFaucetContract = null;
 let _initialState = {
     tokenName: 'PONG',
     loadingBalance: true,
-    balance: 0n,
+    balance: "0",
 
     loadingFaucetStatus: true,
     faucetReady: false,
@@ -33,8 +33,8 @@ export const useGameTokenStore = defineStore('game_token', {
 
     getters: {
         tokenContract: (_) => _gameTokenContract,
-        balanceAsFloat: (state) => formatEther(state.balance),
-        balanceForDisplay: (state) => formatEtherForDisplay(state.balance)
+        balanceAsFloat: (state) => formatEther(BigInt(state.balance)),
+        balanceForDisplay: (state) => formatEtherForDisplay(BigInt(state.balance))
     },
 
     actions: {
@@ -54,13 +54,13 @@ export const useGameTokenStore = defineStore('game_token', {
         async updateBalance() {
             console.log('game_token: updateBalance()');
             if (!_starknetStore.isStarknetReady) {
-                return this.balance = 0n;
+                return this.balance = "0";
             }
 
             let response = await _gameTokenContract.balanceOf(_starknetStore.address);
             this.$patch({
                 loadingBalance: false,
-                balance: response
+                balance: response.toString()
             });
         },
 

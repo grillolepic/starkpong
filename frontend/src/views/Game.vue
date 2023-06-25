@@ -11,14 +11,33 @@ let ctx = null;
 
 onMounted(() => {
   gameStore.startGame();
-  _drawInterval = setInterval(draw, 1000);
-
+  _drawInterval = setInterval(draw, 33);
+  document.addEventListener("keydown", handleKeyboardDown);
+  document.addEventListener("keyup", handleKeyboardUp);
 });
 
 onUnmounted(() => {
   gameStore.reset();
   clearInterval(_drawInterval);
+  document.removeEventListener("keydown", handleKeyboardDown);
+  document.addEventListener("keyup", handleKeyboardUp);
 });
+
+function handleKeyboardDown(event) {
+  if (event.keyCode == 38) {
+    gameStore.handleKeyDown(true);
+  } else if (event.keyCode == 40) {
+    gameStore.handleKeyDown(false);
+  }
+}
+
+function handleKeyboardUp(event) {
+  if (event.keyCode == 38) {
+    gameStore.handleKeyDown(true);
+  } else if (event.keyCode == 40) {
+    gameStore.handleKeyDown(false);
+  }
+}
 
 function draw() {
   if (gameStore.internalStatus != INTERNAL_STATUS.PLAYING) {
@@ -39,7 +58,7 @@ function draw() {
   if (currentState != null && currentState != undefined) {
 
     ctx.fillStyle = "#FFFFFF";
-    //ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     //Paddle 0
     ctx.fillRect(0, currentState.paddle_0.y - (currentState.paddle_0.size / 2.0), 20, currentState.paddle_0.size);
@@ -62,7 +81,6 @@ function draw() {
         currentState.ball.y - (currentState.ball.size / 2.0),
         currentState.ball.size, currentState.ball.size);
     }
-
   }
 }
 

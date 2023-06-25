@@ -53,13 +53,13 @@ function onInput() {
                 <div v-else-if="gameRoomFactoryStore.gameRoomToJoin.error == null && gameRoomFactoryStore.gameRoomToJoin.wager != null"
                     class="flex column flex-center gameInfoSection">
                     <div class="flex row flex-center">
-                        <div class="label">Required bet:</div>
-                        <div class="info">{{ parseFloat(formatEther(gameRoomFactoryStore.gameRoomToJoin.wager)) }} <span
-                                class="bold">{{
-                                    gameTokenStore.tokenName }}</span></div>
+                        <div class="label">Wager:</div>
+                        <div class="info">{{ formatEther(gameRoomFactoryStore.gameRoomToJoin.wager) }} <span class="bold">{{
+                            gameTokenStore.tokenName }}</span></div>
                     </div>
                 </div>
-                <div v-else-if="gameRoomFactoryStore.gameRoomToJoin.error != null" class="flex column flex-center gameInfoSection">
+                <div v-else-if="gameRoomFactoryStore.gameRoomToJoin.error != null"
+                    class="flex column flex-center gameInfoSection">
                     <div class="info bold red">{{ gameRoomFactoryStore.gameRoomToJoin.error }}</div>
                 </div>
                 <div class="button big-button" @click="gameRoomFactoryStore.joinRoom()"
