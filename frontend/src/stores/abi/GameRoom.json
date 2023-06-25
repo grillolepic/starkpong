@@ -253,6 +253,50 @@
     },
     {
         "type": "struct",
+        "name": "stark_pong::game::game_components::state::GameState",
+        "members": [
+            {
+                "name": "turn",
+                "type": "core::integer::u64"
+            },
+            {
+                "name": "score_0",
+                "type": "core::integer::u8"
+            },
+            {
+                "name": "score_1",
+                "type": "core::integer::u8"
+            },
+            {
+                "name": "paddle_0",
+                "type": "stark_pong::game::game_components::objects::Paddle"
+            },
+            {
+                "name": "paddle_1",
+                "type": "stark_pong::game::game_components::objects::Paddle"
+            },
+            {
+                "name": "ball",
+                "type": "stark_pong::game::game_components::objects::Ball"
+            }
+        ]
+    },
+    {
+        "type": "struct",
+        "name": "stark_pong::utils::signature::Signature",
+        "members": [
+            {
+                "name": "r",
+                "type": "core::felt252"
+            },
+            {
+                "name": "s",
+                "type": "core::felt252"
+            }
+        ]
+    },
+    {
+        "type": "struct",
         "name": "stark_pong::game::game_components::state::Checkpoint",
         "members": [
             {

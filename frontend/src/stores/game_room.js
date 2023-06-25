@@ -26,11 +26,11 @@ let _initialState = {
 }
 
 export const GAME_STATUS = {
-    WAITING_FOR_PLAYERS: 0n,
-    IN_PROGRESS: 1n,
-    FINISHED: 2n,
-    PARTIAL_EXIT: 3n,
-    CLOSED: 4n
+    WAITING_FOR_PLAYERS: 0,
+    IN_PROGRESS: 1,
+    FINISHED: 2,
+    PARTIAL_EXIT: 3,
+    CLOSED: 4
 };
 
 export const useGameRoomStore = defineStore('game_room', {
@@ -64,25 +64,19 @@ export const useGameRoomStore = defineStore('game_room', {
             try {
                 _gameRoomContract = new Contract(GAME_ROOM_ABI, game_room_address, _starknetStore.account);
 
-                console.log("_gameRoomContract", _gameRoomContract);
-
                 let status_response = await _gameRoomContract.status();
                 let status = status_response["0"];
                 let deadline = Number(status_response["1"]);
                 let past_deadline = (deadline <= Math.floor(Date.now() / 1000));
 
-                console.log("_gameRoomContract", _gameRoomContract);
-
                 if (past_deadline) {
                     if (status == GAME_STATUS.WAITING_FOR_PLAYERS || status == GAME_STATUS.IN_PROGRESS || status == GAME_STATUS.PARTIAL_EXIT) {
-                        this.reset(true);
+                        return this.reset(true);
                     }
                 } else if (status == GAME_STATUS.FINISHED || status == GAME_STATUS.CLOSED) {
-                    this.reset(true);
+                    return this.reset(true);
                 }
                 
-                console.log("_gameRoomContract", _gameRoomContract);
-
                 let player_0_response = await _gameRoomContract.player(0);
                 let player_1_response = await _gameRoomContract.player(1);
                 let my_player = null;
@@ -222,6 +216,68 @@ export const useGameRoomStore = defineStore('game_room', {
             }
         },
 
+        async partialExit() {
+            if (_gameRoomContract == null) return;
+
+            //Obtain the current checkpoint and turns from local storage
+            let storedGameData = localStorage.getItem(_gameRoomFactoryStore.localKey);
+            if (storedGameData != null && storedGameData != undefined) {
+                storedGameData = JSON.parse(storedGameData);
+            } else {
+                return console.error("No game data found in local storage");
+            }
+
+            if (!"checkpoint" in storedGameData) return;
+
+            let CHECKPOINT = {
+                state: JSON.parse(JSON.stringify(storedGameData.checkpoint.data)),
+                signature_0: {
+                    r: BigInt(storedGameData.checkpoint.signatures[0].r),
+                    s: BigInt(storedGameData.checkpoint.signatures[0].s),
+                },
+                signature_1: {
+                    r: BigInt(storedGameData.checkpoint.signatures[1].r),
+                    s: BigInt(storedGameData.checkpoint.signatures[1].s),
+                }
+            };
+            
+            if (await _starknetStore.sendTransactions([_gameRoomContract.populate("set_checkpoint", [CHECKPOINT])])) {
+                _starknetStore.resetTransaction();
+                this.updateGameRoom();
+            }
+        },
+
+        async disputePartialExit() {
+            if (_gameRoomContract == null) return;
+
+            //Obtain the current checkpoint and turns from local storage
+            let storedGameData = localStorage.getItem(_gameRoomFactoryStore.localKey);
+            if (storedGameData != null && storedGameData != undefined) {
+                storedGameData = JSON.parse(storedGameData);
+            } else {
+                return console.error("No game data found in local storage");
+            }
+
+            if ("checkpoint" in storedGameData) { }
+            if ("turns" in storedGameData) { }
+
+            /*
+            if (await _starknetStore.sendTransactions([_gameRoomContract.populate("dispute_partial_result", [])])) {
+                _starknetStore.resetTransaction();
+                this.updateGameRoom();
+            }
+            */
+        },
+
+        async confirmPartialExit() {
+            if (_gameRoomContract == null) return;
+
+            if (await _starknetStore.sendTransactions([_gameRoomContract.populate("confirm_partial_result", [])])) {
+                _starknetStore.resetTransaction();
+                this.updateGameRoom();
+            }
+        },
+
         reset(redirect_to_home = false) {
             _gameRoomContract = null;
             this.$patch(JSON.parse(JSON.stringify(_initialState)));
@@ -229,6 +285,7 @@ export const useGameRoomStore = defineStore('game_room', {
             if (redirect_to_home) {
                 let routeName = this.$router.currentRoute.value.name;
                 if (routeName == "GameRoom" || routeName == "Game") {
+                    _gameRoomFactoryStore.updateGameRoom();
                     this.$router.push({ name: 'Home' });
                 }
             }

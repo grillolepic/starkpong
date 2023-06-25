@@ -9,10 +9,11 @@ function parseEther(amount) {
 
 function formatEther(amount) {
   let bn = amount.toString();
+  console.log(bn);
   let currentStr = ''
   if (bn.length > 18) {
     let extraZeros = bn.length - 18
-    currentStr = bn.substring(0, extraZeros) + '.' + bn.substring(extraZeros + 1)
+    currentStr = bn.substring(0, extraZeros) + '.' + bn.substring(extraZeros)
   } else {
     let zerosMissing = 18 - bn.length
     currentStr = '0.' + '0'.repeat(zerosMissing) + bn

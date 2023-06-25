@@ -54,7 +54,7 @@ function onInput() {
                     class="flex column flex-center gameInfoSection">
                     <div class="flex row flex-center">
                         <div class="label">Wager:</div>
-                        <div class="info">{{ formatEther(gameRoomFactoryStore.gameRoomToJoin.wager) }} <span class="bold">{{
+                        <div class="info">{{ parseFloat(formatEther(gameRoomFactoryStore.gameRoomToJoin.wager)) }} <span class="bold">{{
                             gameTokenStore.tokenName }}</span></div>
                     </div>
                 </div>

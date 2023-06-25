@@ -11,7 +11,7 @@ let ctx = null;
 
 onMounted(() => {
   gameStore.startGame();
-  _drawInterval = setInterval(draw, 33);
+  _drawInterval = setInterval(draw, 15);
   document.addEventListener("keydown", handleKeyboardDown);
   document.addEventListener("keyup", handleKeyboardUp);
 });
@@ -33,9 +33,9 @@ function handleKeyboardDown(event) {
 
 function handleKeyboardUp(event) {
   if (event.keyCode == 38) {
-    gameStore.handleKeyDown(true);
+    gameStore.handleKeyUp(true);
   } else if (event.keyCode == 40) {
-    gameStore.handleKeyDown(false);
+    gameStore.handleKeyUp(false);
   }
 }
 
@@ -111,9 +111,6 @@ function draw() {
           <div :class="{ 'bold': (gameRoomStore.myPlayerNumber == 1) }">{{ (gameRoomStore.myPlayerNumber == 1) ? 'YOU' :
             'PLAYER 2' }}</div>
           <div class="score">{{ gameStore.currentState.score_1 }}</div>
-        </div>
-        <div v-if="gameStore.paused" style="width: 20px; height: 20px; background-color: yellow; border-radius: 20px;">
-
         </div>
       </div>
       <div id="GameSection" class="flex row flex-center max-width">

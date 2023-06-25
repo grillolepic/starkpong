@@ -1,7 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router';
 import { useStarknetStore } from '../stores/starknet';
-import { useGameRoomStore } from '../stores/game_room';
+import { useGameRoomStore, GAME_STATUS } from '../stores/game_room';
 import { useGameRoomFactoryStore } from '../stores/game_room_factory';
 import TransactionStatus from '../components/TransactionStatus.vue';
 
@@ -22,7 +22,8 @@ const gameRoomFactoryStore = useGameRoomFactoryStore();
                 <TransactionStatus />
             </div>
             <div v-else-if="gameRoomStore.currentGameRoom != null" class="flex column section">
-                <div class="button big-button" @click="gameRoomStore.redirectFromStatus(true)">CONTINUE GAME</div>
+                <div class="button big-button" @click="gameRoomStore.redirectFromStatus(true)" v-if="gameRoomStore.status != GAME_STATUS.PARTIAL_EXIT">CONTINUE GAME</div>
+                <div class="button big-button" @click="gameRoomStore.partialExit()">EXIT GAME</div>
             </div>
             <div v-else-if="gameRoomFactoryStore.lastGameRoom != null">
                 <div class="button big-button" @click="gameRoomFactoryStore.exitLastGameRoom()">EXIT UNFINISHED GAME</div>

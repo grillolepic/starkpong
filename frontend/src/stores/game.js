@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
-import { Contract, hash, ec } from 'starknet';
+import { hash, ec } from 'starknet';
 import { useStarknetStore } from './starknet';
-import { useGameTokenStore } from './game_token';
 import { useGameRoomFactoryStore } from './game_room_factory';
 import { useGameRoomStore, GAME_STATUS } from './game_room';
 import { joinRoom } from 'trystero';
@@ -16,7 +15,7 @@ let _getMessage = null;
 let _partialExitTimer = null;
 let _messageTimer = null;
 
-const TARGET_DISTANCE_BETWEEN_TURNS = 33;
+const TARGET_DISTANCE_BETWEEN_TURNS = 0;
 const CHECKPOINT_DISTANCE = 50n;
 const OVERSHOOT = 4n;
 const TIME_FOR_PARTIAL_EXIT = 3 * 60 * 1000;
@@ -166,8 +165,7 @@ export const useGameStore = defineStore('game', {
             };
 
             //02. If a checkpoint was stored, validate it and load it. Delete if invalid. Redownload if on-chain.
-            if (storedCheckpoint != null) {
-
+            if (false && storedCheckpoint != null) {
                 try {
                     let storedCheckpointHash = this.getCheckpointHash(storedCheckpoint.data);
 
@@ -556,8 +554,8 @@ export const useGameStore = defineStore('game', {
                                         let signature = ec.starkCurve.sign(checkpointHash, this.keys.privateKey);
 
                                         CHECKPOINT.signatures[_gameRooomStore.myPlayerNumber] =
-                                            { ... locallyCreatedCheckpoint.signatures[_gameRooomStore.myPlayerNumber] };
-                                        
+                                            { ...locallyCreatedCheckpoint.signatures[_gameRooomStore.myPlayerNumber] };
+
                                         this.updateCheckpoint(CHECKPOINT);
 
                                         //Send the checkpoint with both signatures
@@ -634,10 +632,18 @@ export const useGameStore = defineStore('game', {
 
         handleKeyDown(up) {
             if (this.currentAction == ACTIONS.NO_MOVE) {
-                this.currentAction == (up)?ACTIONS.MOVE_UP:ACTIONS.MOVE_DOWN;
+                if (up) {
+                    this.currentAction = ACTIONS.MOVE_UP;
+                } else {
+                    this.currentAction = ACTIONS.MOVE_DOWN;
+                }
             }
-            if (up) { this.keyUp = true; }
-            else { this.keyDown = true; }
+            if (up) {
+                this.keyUp = true;
+            }
+            else {
+                this.keyDown = true;
+            }
         },
 
         handleKeyUp(up) {
@@ -647,7 +653,11 @@ export const useGameStore = defineStore('game', {
             if (!this.keyUp && !this.keyDown) {
                 this.currentAction = ACTIONS.NO_MOVE;
             } else {
-                this.currentAction = (this.keyUp)?ACTIONS.MOVE_UP:ACTIONS.MOVE_DOWN;
+                if (this.keyUp) {
+                    this.currentAction = ACTIONS.MOVE_UP;
+                } else {
+                    this.currentAction = ACTIONS.MOVE_DOWN;
+                }
             }
         },
 
@@ -803,13 +813,211 @@ export const useGameStore = defineStore('game', {
         state_transition(state, action) {
             console.log(`game: state_transition(${state}, ${action})`);
             //TODO: STATE TRANSITION FUNCTION
+            const SPEED = 100n;
+            const MAX_Y = 12000n;
+            const MAX_X = 16000n;
+            const PADDLE_HEIGHT = 400n;
 
+            let playerNumber = this.playerNumberFromTurn(BigInt(state.turn));
+            if (playerNumber == 0n) {
+                //Calculate the new speed and direction
+                if (action == ACTIONS.MOVE_UP) {
+                    state.paddle_0.moving_up = true;
+                    state.paddle_0.speed = SPEED.toString();
+                } else if (action == ACTIONS.MOVE_DOWN) {
+                    state.paddle_0.moving_up = false;
+                    state.paddle_0.speed = SPEED.toString();
+                } else {
+                    state.paddle_0.speed = 0n.toString();
+                }
 
+                //Now, calculate the new position
+                if (BigInt(state.paddle_0.speed) > 0n) {
+                    if (state.paddle_0.moving_up) {
+                        let MIN_VALUE = BigInt(state.paddle_0.size) / 2n;
+                        if (BigInt(state.paddle_0.speed) > (BigInt(state.paddle_0.y) - MIN_VALUE)) {
+                            state.paddle_0.y = MIN_VALUE.toString();
+                        } else {
+                            state.paddle_0.y = (BigInt(state.paddle_0.y) - BigInt(state.paddle_0.speed)).toString();
+                        }
+                    } else {
+                        let MAX_VALUE = MAX_Y - (BigInt(state.paddle_0.size) / 2n);
+                        state.paddle_0.y = (BigInt(state.paddle_0.y) + BigInt(state.paddle_0.speed)).toString();
+                        if (BigInt(state.paddle_0.y) > MAX_VALUE) {
+                            state.paddle_0.y = MAX_VALUE.toString();
+                        }
+                    }
+                }
+            } else {
+                //Calculate the new speed and direction
+                if (action == ACTIONS.MOVE_UP) {
+                    state.paddle_1.moving_up = true;
+                    state.paddle_1.speed = SPEED.toString();
+                } else if (action == ACTIONS.MOVE_DOWN) {
+                    state.paddle_1.moving_up = false;
+                    state.paddle_1.speed = SPEED.toString();
+                } else {
+                    state.paddle_1.speed = 0n.toString();
+                }
 
+                //Now, calculate the new position
+                if (BigInt(state.paddle_1.speed) > 0n) {
+                    if (state.paddle_1.moving_up) {
+                        let MIN_VALUE = BigInt(state.paddle_1.size) / 2n;
+                        if (BigInt(state.paddle_1.speed) > (BigInt(state.paddle_1.y) - MIN_VALUE)) {
+                            state.paddle_1.y = MIN_VALUE.toString();
+                        } else {
+                            state.paddle_1.y = (BigInt(state.paddle_1.y) - BigInt(state.paddle_1.speed)).toString();
+                        }
+                    } else {
+                        let MAX_VALUE = MAX_Y - (BigInt(state.paddle_1.size) / 2n);
+                        state.paddle_1.y = (BigInt(state.paddle_1.y) + BigInt(state.paddle_1.speed)).toString();
+                        if (BigInt(state.paddle_1.y) > MAX_VALUE) {
+                            state.paddle_1.y = MAX_VALUE.toString();
+                        }
+                    }
+                }
+            }
 
+            if (BigInt(state.ball.speed_x) == 0n && BigInt(state.ball.speed_y == 0n)) {
+                //The ball is not moving, so we need to set it in motion
+                state.ball.speed_x = SPEED.toString();
+                state.ball.moving_left = true;
+                state.ball.speed_y = SPEED.toString();
+            }
+
+            //Calculate the ball position
+            if (state.ball.moving_up) {
+                let MIN_VALUE = BigInt(state.ball.size) / 2n;
+                let distance = BigInt(state.ball.y) - MIN_VALUE;
+                if (BigInt(state.ball.speed_y) >= distance) {
+                    state.ball.y = (BigInt(state.ball.speed_y) - distance).toString();
+                    state.ball.moving_up = false;
+                } else {
+                    state.ball.y = (BigInt(state.ball.y) - BigInt(state.ball.speed_y)).toString();
+                }
+            } else {
+                let MAX_VALUE = MAX_Y - (BigInt(state.ball.size) / 2n);
+                let distance = MAX_VALUE - BigInt(state.ball.y);
+                if (BigInt(state.ball.speed_y) >= distance) {
+                    state.ball.y = (MAX_VALUE - (BigInt(state.ball.speed_y) - distance)).toString();
+                    state.ball.moving_up = true;
+                } else {
+                    state.ball.y = (BigInt(state.ball.y) + BigInt(state.ball.speed_y)).toString();
+                }
+            }
+
+            let has_scored_0 = false;
+            let has_scored_1 = false;
+
+            if (state.ball.moving_left) {
+                let ball_lower_limit = BigInt(state.ball.y) + (BigInt(state.ball.size) / 2n);
+                let ball_upper_limit = BigInt(state.ball.y) - (BigInt(state.ball.size) / 2n);
+                let paddle_lower_limit = BigInt(state.paddle_0.y) + (BigInt(state.paddle_0.size) / 2n);
+                let paddle_upper_limit = BigInt(state.paddle_0.y) - (BigInt(state.paddle_0.size) / 2n);
+                let will_bounce = (ball_lower_limit >= paddle_upper_limit) && (ball_upper_limit <= paddle_lower_limit);
+
+                let MIN_VALUE = PADDLE_HEIGHT + (BigInt(state.ball.size) / 2n);
+                if (BigInt(state.ball.x) < MIN_VALUE) {
+                    //The ball has already crossed the paddle limit and will score the goal on time
+                    if (BigInt(state.ball.speed_x) >= BigInt(state.ball.x)) {
+                        //The ball reaches the screen limit in this turn. Change score
+                        state.score_1 = (BigInt(state.score_1) + 1n).toString();
+                        has_scored_1 = true;
+                    } else {
+                        //Continue moving the ball
+                        state.ball.x = (BigInt(state.ball.x) - BigInt(state.ball.speed_x)).toString();
+                    }
+                } else {
+                    let distance = BigInt(state.ball.x) - MIN_VALUE;
+
+                    if (BigInt(state.ball.speed_x) >= (BigInt(state.ball.x))) {
+                        //The ball will reach the screen limit in this turn, but it can still bounce
+                        if (will_bounce) {
+                            state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                            state.ball.moving_left = false;
+                        } else {
+                            //The ball will not bounce, so the ball will reach 0. Change score.
+                            state.score_1 = (BigInt(state.score_1) + 1n).toString();
+                            has_scored_1 = true;
+                        }
+                    } else {
+                        if ((BigInt(state.ball.x) - BigInt(state.ball.speed)) < MIN_VALUE) {
+                            //The ball will cross the paddle limit in this turn, but it can still bounce
+                            if (will_bounce) {
+                                state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                                state.ball.moving_left = false;
+                            } else {
+                                //The ball will not bounce, but won't reach 0 yet. Continue moving.
+                                state.ball.x = (BigInt(state.ball.x) - BigInt(state.ball.speed_x)).toString();
+                            }
+                        } else {
+                            //The ball will not cross the paddle limit in this turn, so we can just move it
+                            state.ball.x = (BigInt(state.ball.x) - BigInt(state.ball.speed_x)).toString();
+                        }
+                    }
+                }
+            } else {
+                let MAX_VALUE = MAX_X - PADDLE_HEIGHT - (BigInt(state.ball.size) / 2n);
+                if (BigInt(state.ball.x) > MAX_VALUE) {
+                    //The ball has already crossed the paddle limit and will score the goal on time
+                    if (BigInt(state.ball.speed_x) >= (MAX_X - BigInt(state.ball.x))) {
+                        //The ball reach the screen limit in this turn. Change score
+                        state.score_0 = (BigInt(state.score_0) + 1n).toString();
+                        has_scored_0 = true;
+                    } else {
+                        //Continue moving the ball
+                        state.ball.x = (BigInt(state.ball.x) + BigInt(state.ball.speed_x)).toString();
+                    }
+                } else {
+                    let distance = MAX_VALUE - BigInt(state.ball.x);
+
+                    if (BigInt(state.ball.speed_x) >= (MAX_X - BigInt(state.ball.x))) {
+                        //The ball will reach the screen limit in this turn, but it can still bounce
+                        if (will_bounce) {
+                            state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                            state.ball.moving_left = true;
+                        } else {
+                            //The ball will not bounce, so the ball will reach 0. Change score.
+                            state.score_0 = (BigInt(state.score_0) + 1n).toString();
+                            has_scored_0 = true;
+                        }
+                    } else {
+                        if ((BigInt(state.ball.x) + BigInt(state.ball.speed)) > MAX_VALUE) {
+                            //The ball will cross the paddle limit in this turn, but it can still bounce
+                            if (will_bounce) {
+                                state.ball.x = (BigInt(state.ball.speed_x) - distance).toString();
+                                state.ball.moving_left = true;
+                            } else {
+                                //The ball will not bounce, but won't reach 0 yet. Continue moving.
+                                state.ball.x = (BigInt(state.ball.x) + BigInt(state.ball.speed_x)).toString();
+                            }
+                        } else {
+                            //The ball will not cross the paddle limit in this turn, so we can just move it
+                            state.ball.x = (BigInt(state.ball.x) + BigInt(state.ball.speed_x)).toString();
+                        }
+                    }
+                }
+            }
+
+            if (has_scored_0 || has_scored_1) {
+                state.ball.x = (MAX_X / 2n).toString();
+                state.ball.y = (MAX_Y / 2n).toString();
+                state.ball.speed_x = SPEED.toString();
+                state.ball.speed_y = SPEED.toString();
+            }
+            if (has_scored_0) {
+                state.ball.moving_left = false;
+            } else {
+                state.ball.moving_left = true;
+            }
 
             state.turn = (BigInt(state.turn) + 1n).toString();
             return state;
+        },
+
+        randomize_ball_velocity(turn) {
+
         },
 
         processTurn(turn) {
@@ -1092,7 +1300,29 @@ export const useGameStore = defineStore('game', {
 
         getCheckpointHash(state) {
             let state_as_array_of_felts = this.stateToArrayOfBigInt(state);
-            return hash.computeHashOnElements(state_as_array_of_felts);
+
+            let manual_hash = ec.starkCurve.pedersen(BigInt(state_as_array_of_felts[0]), BigInt(state_as_array_of_felts[1]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[2]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[3]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[4]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[5]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[6]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[7]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[8]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[9]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[10]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[11]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[12]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[13]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[14]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[15]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[16]));
+            manual_hash = ec.starkCurve.pedersen(manual_hash, BigInt(state_as_array_of_felts[17]));
+        
+            console.log(manual_hash);
+            console.log(hash.computeHashOnElements(state_as_array_of_felts));
+
+            return manual_hash; //hash.computeHashOnElements(state_as_array_of_felts);
         },
 
         showPartialExit() {
