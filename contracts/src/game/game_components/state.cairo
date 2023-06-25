@@ -11,7 +11,7 @@ use stark_pong::game::game_components::objects::{
     IntoPaddleFelt252ArrayImpl
 };
 use stark_pong::game::game_components::actions::{TurnAction};
-use stark_pong::game::{limits_check};
+use stark_pong::game::{limits_check, state_transition};
 use stark_pong::utils::signature::{Signature};
 use ecdsa::check_ecdsa_signature;
 use stark_pong::utils::signature_verification::external_verify;
@@ -39,7 +39,7 @@ trait GameStateTrait {
     fn hash(self: @GameState) -> felt252;
     fn is_valid(self: @GameState, previous_state: @GameState) -> bool;
     fn winner(self: @GameState) -> Option<u8>;
-    fn apply_turn(self: @GameState, turn: TurnAction) -> GameState;
+    fn apply_turn(self: @GameState, turn: TurnAction, seed: u64) -> GameState;
     fn calculate_optimal_predictable_result(self: @GameState) -> GameState;
 }
 
@@ -220,13 +220,16 @@ impl HashGameStateImpl of GameStateTrait {
         }
     }
 
-    fn apply_turn(self: @GameState, turn: TurnAction) -> GameState {
-        let mut game_state = *self;
-        game_state
+    fn apply_turn(self: @GameState, turn: TurnAction, seed: u64) -> GameState {
+        let new_state = state_transition(self, turn.action, seed).unwrap();
+        new_state
     }
 
     fn calculate_optimal_predictable_result(self: @GameState) -> GameState {
         let mut game_state = *self;
+
+        //TODO: Calculate an optimal outcome for both players until the next bounce or the next score
+
         game_state
     }
 }
