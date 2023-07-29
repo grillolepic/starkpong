@@ -1,15 +1,10 @@
-use serde::Serde;
 use hash::LegacyHash;
-use array::{ArrayTrait, SpanTrait};
-use option::OptionTrait;
 use traits::{Into, TryInto};
 use starknet::ContractAddress;
-//use ecdsa::check_ecdsa_signature;
-use result::{ResultTrait, ResultTraitImpl};
+use ecdsa::check_ecdsa_signature;
 use stark_pong::utils::signature::{Signature};
-use stark_pong::utils::signature_verification::external_verify;
 
-#[derive(Drop, Serde, Copy)]
+#[derive(Drop, Copy, Serde)]
 enum Action {
     MoveUp: (),
     NoMove: (),
@@ -26,18 +21,21 @@ impl IntoFelt252ActionImpl of Into<Action, felt252> {
     }
 }
 
-impl IntoActionFelt252Impl of Into<felt252, Action> {
-    fn into(self: felt252) -> Action {
+impl TryIntoActionFelt252Impl of TryInto<felt252, Action> {
+    fn try_into(self: felt252) -> Option<Action> {
         if (self == 0) {
-            return Action::MoveUp(());
+            return Option::Some(Action::MoveUp(()));
+        } else if (self == 1) {
+            return Option::Some(Action::MoveDown(()));
         } else if (self == 2) {
-            return Action::MoveDown(());
+            return Option::Some(Action::NoMove(()));
+        } else {
+            return Option::None(());
         }
-        Action::NoMove(())
     }
 }
 
-#[derive(Serde, Drop, Copy)]
+#[derive(Drop, Copy, Serde)]
 struct TurnAction {
     turn: u64,
     action: Action,
@@ -54,9 +52,6 @@ impl TurnActionTraitImpl of TurnActionTrait {
         let action: felt252 = turn_action.action.into();
         let turn_action_hash = LegacyHash::hash(turn_action.turn.into(), action);
 
-        //EXPERIMENTAL: check_ecdsa_signature(turn_action_hash, player_public_key.into(), turn_action.signature.r, turn_action.signature.s)
-        external_verify(turn_action_hash, player_public_key, turn_action.signature);
-        
-        true
+        check_ecdsa_signature(turn_action_hash, player_public_key.into(), turn_action.signature.r, turn_action.signature.s)
     }
 }

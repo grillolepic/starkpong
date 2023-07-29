@@ -14,7 +14,7 @@ const MAX_X: u16 = 16000_u16;
 const MAX_BALL_SPEED: u16 = 100_u16;
 const PADDLE_SPEED: u16 = 100_u16;
 const PADDLE_HEIGHT: u16 = 400_u16;
-const MAX_SCORE: u8 = 3_u8;
+const WINNING_SCORE: u8 = 3;
 
 fn initial_game_state(seed: u64) -> GameState {
     let (speed_x, speed_y, moving_up, moving_left) = randomize_ball(seed, 0_u64);
@@ -69,7 +69,7 @@ fn state_transition(state: @GameState, action: Action, seed: u64) -> Option<Game
     let mut new_state = *state;
 
     //Check if there's already a winner
-    if (new_state.score_0 >= MAX_SCORE | new_state.score_1 >= MAX_SCORE) {
+    if (new_state.score_0 >= WINNING_SCORE || new_state.score_1 >= WINNING_SCORE) {
         return Option::None(());
     }
 
@@ -320,7 +320,7 @@ fn state_transition(state: @GameState, action: Action, seed: u64) -> Option<Game
     }
 
     //If the game continues
-    if (new_state.score_0 < MAX_SCORE & new_state.score_1 < MAX_SCORE) {
+    if (new_state.score_0 < WINNING_SCORE && new_state.score_1 < WINNING_SCORE) {
         //Reset the ball in case of score
         if (has_scored_0 | has_scored_1) {
             new_state.ball.x = MAX_X / 2_u16;

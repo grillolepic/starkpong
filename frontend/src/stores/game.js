@@ -166,7 +166,7 @@ export const useGameStore = defineStore('game', {
             };
 
             //02. If a checkpoint was stored, validate it and load it. Delete if invalid. Redownload if on-chain.
-            if (storedCheckpoint != null) {
+            if (false && storedCheckpoint != null) {
                 try {
                     let storedCheckpointHash = this.getCheckpointHash(storedCheckpoint.data);
 
